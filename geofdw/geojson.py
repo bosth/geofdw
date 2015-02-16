@@ -34,7 +34,7 @@ class GeoJSON(GeoVectorForeignDataWrapper):
     :param list columns: Columns the user has specified in PostGIS.
     """
     self.url = options.get('url')
-    srid = int(options.get('srid', '4326'))
+    srid = options.get('srid', 4326)
     super(GeoJSON, self).__init__(options, columns, srid = srid)    
 
   def execute(self, quals, columns):

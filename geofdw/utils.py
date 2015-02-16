@@ -8,9 +8,11 @@ class GeoVectorForeignDataWrapper(ForeignDataWrapper):
     self.use_srid(srid)
 
   def use_srid(self, srid):
-    self.srid = srid
     if srid:
+      self.srid = int(srid)
       geos.WKBWriter.defaults['include_srid'] = True
+    else:
+      self.srid = None
 
   def as_wkb(self, feature):
     if self.srid:

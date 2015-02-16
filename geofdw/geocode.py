@@ -63,7 +63,7 @@ class FGeocode(_Geocode):
 
     :param list columns: List of columns requested in the SELECT statement.
     """
-    (query, bounds) = self._get_predicates(quals)
+    query, bounds = self._get_predicates(quals)
 
     if query:
       return self._execute(columns, query, bounds)
