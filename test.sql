@@ -1,6 +1,7 @@
 DROP SERVER geojson CASCADE;
 DROP SERVER geocode CASCADE;
 DROP SERVER geocode_reverse CASCADE;
+DROP SERVER osrm CASCADE;
 
 --GeoJSON
 CREATE SERVER geojson foreign data wrapper multicorn options ( wrapper 'geofdw.GeoJSON' );
@@ -24,3 +25,8 @@ SELECT query, rank, address, ST_AsText(geom), ST_SRID(geom) FROM gc_arcgis WHERE
 CREATE SERVER geocode_reverse FOREIGN DATA WRAPPER multicorn OPTIONS ( wrapper 'geofdw.RGeocode' );
 CREATE FOREIGN TABLE gc_google_reverse ( query GEOMETRY, rank INTEGER, address TEXT, geom GEOMETRY ) SERVER geocode_reverse;
 SELECT ST_AsText(query), rank, address, ST_AsText(geom), ST_SRID(geom) FROM gc_google_reverse WHERE query = ST_SetSRID(ST_MakePoint(52, -110), 4326);
+
+--OSRM
+CREATE SERVER osrm FOREIGN DATA WRAPPER multicorn OPTIONS ( wrapper 'geofdw.OSRM' );
+CREATE FOREIGN TABLE osrm ( name TEXT, length INTEGER, time INTEGER, azimuth FLOAT, turn INTEGER, geom GEOMETRY, source GEOMETRY, target GEOMETRY ) SERVER osrm;
+SELECT name, length, time, turn, azimuth,  ST_Length(geom), ST_SRID(geom) FROM osrm WHERE source = ST_SetSRID(ST_MakePoint(51.6407057,-121.2970343), 4326) AND target = ST_SetSRID(ST_MakePoint(49.2892415,-123.017522), 4326);
