@@ -35,8 +35,7 @@ class OSRM(GeoVectorForeignDataWrapper):
       time INTEGER: travel time (s)
       azimuth FLOAT
       source GEOMETRY(POINT, 4326): source point of route
-      target GEOMETRY(POINT, 4326): target point of rouce
-
+      target GEOMETRY(POINT, 4326): target point of route
     """
     super(OSRM, self).__init__(options, columns, srid = 4326)    
     zoom = int(options.get('zoom', 14))
