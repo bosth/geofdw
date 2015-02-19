@@ -1,3 +1,3 @@
-from geocode import *
-from geojson import *
-from osrm import *
+from geocode import FGeocode, RGeocode
+from geojson import GeoJSON
+from osrm import OSRM

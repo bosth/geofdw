@@ -3,10 +3,7 @@
 geofdw
 """
 
-from setuptools import setup, find_packages
-
-REQUIRES = [
-]
+from setuptools import setup
 
 setup(
     name='geofdw',
@@ -18,11 +15,15 @@ setup(
     author='Benjamin Trigona-Harany',
     author_email='bosth@alumni.sfu.ca',
 
-    packages=find_packages(),
+    packages=['geofdw'],
     install_requires = [
-      'multicorn'
+      'multicorn',
+      'Shapely'
     ],
     extras_require = {
+      'OSRM': ['polyline>=1.1'],
+      'Geocode': ['geopy>=1.9.1'],
+      'GeoJSON': ['requests>=2.4.3']
     },
     keywords='gis geographical postgis fdw postgresql'
 )
