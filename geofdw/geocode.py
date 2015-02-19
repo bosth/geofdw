@@ -12,7 +12,16 @@ class _Geocode(GeoVectorForeignDataWrapper):
   def __init__(self, options, columns):
     super(_Geocode, self).__init__(options, columns, srid = 4326)    
     self.service = options.get('service', 'googlev3')
-    self.geocoder = geopy.get_geocoder_for_service(self.service)()
+    geocoder = geopy.get_geocoder_for_service(self.service)
+    if geocoder == geopy.geocoders.googlev3.GoogleV3:
+      api_key = options.get('api_key')
+      self.geocoder = geocoder(api_key = api_key)
+    elif geocoder == geopy.geocoders.arcgis.ArcGIS:
+      username = options.get('username')
+      password = options.get('password')
+      self.geocoder = geocoder(username = username, password = password)
+    else:
+      self.geocoder = geocoder()
 
   def get_path_keys(self):
     """
@@ -38,6 +47,9 @@ class FGeocode(_Geocode):
 
     :param dict options: Options passed to the table creation.
       service: 'arcgis', 'googlev3', 'nominatim'
+      api_key: API key for GoogleV3 (optional)
+      username: user name for ArcGIS (optional)
+      password: password for ArcGIS (optional)
 
     :param list columns: Columns the user has specified in PostGIS.
     """
@@ -129,6 +141,9 @@ class RGeocode(_Geocode):
 
     :param dict options: Options passed to the table creation.
       service: 'arcgis', 'googlev3', 'nominatim'
+      api_key: API key for GoogleV3 (optional)
+      username: user name for ArcGIS (optional)
+      password: password for ArcGIS (optional)
 
     :param list columns: Columns the user has specified in PostGIS.
     """
