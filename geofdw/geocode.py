@@ -89,17 +89,17 @@ class FGeocode(_Geocode):
     col_query = 'query' in columns
     locations = self._get_locations(query, bounds)
 
-    for location in locations:
-      rank = rank + 1
-      row = { 'rank' : rank }
-      if col_geom:
-        row['geom'] = self.as_wkb(Point(location.latitude, location.longitude, location.altitude))
-      if col_addr:
-        row['address'] = location.address
-      if col_query:
-        row['query'] = query
-      yield row
-
+    if locations:
+      for location in locations:
+        rank = rank + 1
+        row = { 'rank' : rank }
+        if col_geom:
+          row['geom'] = self.as_wkb(Point(location.latitude, location.longitude, location.altitude))
+        if col_addr:
+          row['address'] = location.address
+        if col_query:
+          row['query'] = query
+        yield row
 
   def _get_predicates(self, quals):
     query = None
