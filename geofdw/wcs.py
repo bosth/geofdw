@@ -72,9 +72,9 @@ class WCS(GeoRasterForeignDataWrapper):
     xml = self.xml.replace('$MINX', str(bounds[0])).replace('$MINY', str(bounds[1])).replace('$MAXX', str(bounds[2])).replace('$MAXY', str(bounds[3]))
     req = requests.post(self.url, headers=self.headers, data=xml)
     if req.status_code == 200:
-      grid = req.text
-      print grid
-      rast = self.arcgrid_to_wkb(grid, bounds)
+      grid = ArcGrid(self.srid)
+      grid.parse(req.text)
+      rast = grid.to_wkb(grid, bounds)
       return [ { 'rast' : rast, 'geom' : bbox } ] # add geom
     else:
       return None

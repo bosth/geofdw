@@ -4,6 +4,7 @@ from shapely import geos
 from cStringIO import StringIO
 import re
 import struct
+import sys
 
 class GeoForeignDataWrapper(ForeignDataWrapper):
   def crs_to_srid(self, crs):
@@ -33,10 +34,19 @@ class GeoRasterForeignDataWrapper(GeoForeignDataWrapper):
   def __init__(self, options, columns, srid = None):
     super(GeoRasterForeignDataWrapper, self).__init__(options, columns)    
 
-  def parse_arcgrid(self, grid):
-    buf = StringIO(grid)
+class ArcGrid():
+  def __init__(self, srid = None):
+    self.data = []
+    self.data_type = None
+    self.data_min = sys.float_info.max
+    self.data_max = sys.float_info.min
+    self.srid = srid
+
+  def parse(self, grid):
     header = {}
-    data = []
+    buf = StringIO(grid)
+    self.data_type = int
+
     while True:
       line = buf.readline().split()
       if not line:
@@ -50,26 +60,49 @@ class GeoRasterForeignDataWrapper(GeoForeignDataWrapper):
         if len(line) != header['ncols']:
           raise Exception('Expected %d columns, found %d' % (len(v), header['ncols']))
         for v in line:
-          data.append(float(v))
-    return (header, data)
+          num = float(v)
+          if num < self.data_min:
+            self.data_min = num
+          elif num > self.data_max:
+            self.data_max = num
+          self.data.append(num)
+          if self.data_type == int and not num.is_integer():
+            self.data_type = float
 
-  def arcgrid_to_wkb(self, grid, bbox):
-    header, data = self.parse_arcgrid(grid)
-    width = header['ncols']
-    height = header['nrows']
-    nodata = header.get('nodata_value')
-    scalex = float(bbox[2] - bbox[0]) / width
-    scaley = float(bbox[3] - bbox[1]) / height
+    self.width = header['ncols']
+    self.height = header['nrows']
+    self.nodata = header.has_key('nodata_value')
+    if self.nodata:
+      self.nodata_val = float(header.get('nodata_value'))
+      if self.nodata_val < self.data_min:
+        self.data_min = self.nodata_val
+      elif self.nodata_val > self.data_max:
+        self.data_max = self.nodata_val
+      if not self.nodata_val.is_integer():
+        self.data_type = float
+
+  def best_data_type(self):
+    if self.data_type == int:
+      if self.data_min < 0:
+        if self.data_min >= -2**31 and self.data_max <= 2**31-1:
+          return ('<i', 7) # PG: 32SI
+      else:
+        if self.data_max <= 2**32-1:
+          return ('<I', 8) # PG: 32UI
+    self.data_type = float
+    return ('<d', 11) # PG: 64BF
+
+  def to_wkb(self, grid, bbox):
+    scalex = float(bbox[2] - bbox[0]) / self.width
+    scaley = float(bbox[3] - bbox[1]) / self.height
     if self.srid:
       srid = self.srid
     else:
       srid = 0
-
-    wkb = ''
-
-    # TODO handle nodata = None
+    struct_data_type, pg_data_type  = self.best_data_type()
 
     # meta data (some unnecessary stuff here)
+    wkb = ''
     wkb += struct.pack('<b', 1) # endianness
     wkb += struct.pack('<H', 0) # version
     wkb += struct.pack('<H', 1) # num bands
@@ -80,21 +113,21 @@ class GeoRasterForeignDataWrapper(GeoForeignDataWrapper):
     wkb += struct.pack('<d', 0) # skew x
     wkb += struct.pack('<d', 0) # skey y
     wkb += struct.pack('<i', srid) # SRID
-    wkb += struct.pack('<H', width) # width
-    wkb += struct.pack('<H', height) # height
+    wkb += struct.pack('<H', self.width) # width
+    wkb += struct.pack('<H', self.height) # height
 
     # band meta data
     band  = 0
-    band += 10 << 0 # pixel type (hardcoded to 11 = 64-bit floating point) TODO: select best type
+    band += pg_data_type << 0 # pixel type (see rt_api.h)
     band +=  0 << 4 # reserved bit
     band +=  0 << 5 # is no data
-    band +=  1 << 6 if nodata else 0 # has no data
+    band +=  1 << 6 if self.nodata else 0 # has no data
     band += 0 << 7 # is offdb
     wkb += struct.pack('<B', band)
-    wkb += struct.pack('<f', float(nodata)) # TODO: pixel type
+    wkb += struct.pack(struct_data_type, self.data_type(self.nodata_val) if self.nodata else 0)
 
     # band data
-    for val in data:
-      wkb += struct.pack('<f', val) # TODO: adjust to take type into account
+    for val in self.data:
+      wkb += struct.pack(struct_data_type, self.data_type(val))
 
     return wkb.encode('hex')
