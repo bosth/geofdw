@@ -3,6 +3,7 @@
 """
 
 from utils import *
+from shapely import wkb
 import requests
 
 XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -52,22 +53,36 @@ class WCS(GeoRasterForeignDataWrapper):
     self.url = options.get('url')
     self.headers = {'content-type': 'text/xml', 'Accept-Encoding': 'text' }
 
+# can estimate this
+#  def get_path_keys(self):
+#    """
+#    Query planner helper.
+#    """
+#    return [ ('rast', 1) ]
+
   def execute(self, quals, columns):
-    # hardcoding bounds for testing
-    minx =  600000
-    miny = 4915000
-    maxx =  605000
-    maxy = 4920000
-    #minx = 640000
-    #miny = 4875000
-    #maxx = 645000
-    #maxy = 4880000
-    bbox = (minx, miny, maxx, maxy)
-    
-    xml = self.xml.replace('$MINX', str(minx)).replace('$MINY', str(miny)).replace('$MAXX', str(maxx)).replace('$MAXY', str(maxy))
+    bbox = self._get_predicates(quals)
+    if bbox:
+      return self._get_raster(bbox)
+    else:
+      return None
+
+  def _get_raster(self, bbox):
+    bounds = wkb.loads(bbox, hex=True).bounds
+    xml = self.xml.replace('$MINX', str(bounds[0])).replace('$MINY', str(bounds[1])).replace('$MAXX', str(bounds[2])).replace('$MAXY', str(bounds[3]))
     req = requests.post(self.url, headers=self.headers, data=xml)
     if req.status_code == 200:
       grid = req.text
-      return [ { 'rast' : self.arcgrid_to_wkb(grid, bbox) } ]
+      print grid
+      rast = self.arcgrid_to_wkb(grid, bounds)
+      return [ { 'rast' : rast, 'geom' : bbox } ] # add geom
     else:
       return None
+
+  def _get_predicates(self, quals):
+    for qual in quals:
+      if qual.field_name == 'geom' and qual.operator in ['=', '~=']:
+        return qual.value
+      elif qual.value == 'geom' and qual.operator in ['=', '~=']:
+        return qual.field_name
+    return None

@@ -57,12 +57,19 @@ class GeoRasterForeignDataWrapper(GeoForeignDataWrapper):
     header, data = self.parse_arcgrid(grid)
     width = header['ncols']
     height = header['nrows']
+    nodata = header.get('nodata_value')
     scalex = float(bbox[2] - bbox[0]) / width
     scaley = float(bbox[3] - bbox[1]) / height
+    if self.srid:
+      srid = self.srid
+    else:
+      srid = 0
 
     wkb = ''
 
-    # meta data
+    # TODO handle nodata = None
+
+    # meta data (some unnecessary stuff here)
     wkb += struct.pack('<b', 1) # endianness
     wkb += struct.pack('<H', 0) # version
     wkb += struct.pack('<H', 1) # num bands
@@ -70,26 +77,24 @@ class GeoRasterForeignDataWrapper(GeoForeignDataWrapper):
     wkb += struct.pack('<d', scaley) # scale y
     wkb += struct.pack('<d', bbox[0]) # upper left x
     wkb += struct.pack('<d', bbox[3]) # upper left y
-    wkb += struct.pack('<d', 0) # upper left x
-    wkb += struct.pack('<d', 0) # upper left y
-    wkb += struct.pack('<i', self.srid) # SRID
+    wkb += struct.pack('<d', 0) # skew x
+    wkb += struct.pack('<d', 0) # skey y
+    wkb += struct.pack('<i', srid) # SRID
     wkb += struct.pack('<H', width) # width
     wkb += struct.pack('<H', height) # height
 
     # band meta data
     band  = 0
-    band += 11 << 0 # pixel type (hardcoded to 64-bit floating point) TODO: select best type
+    band += 10 << 0 # pixel type (hardcoded to 11 = 64-bit floating point) TODO: select best type
     band +=  0 << 4 # reserved bit
     band +=  0 << 5 # is no data
-    if header['nodata_value']:
-      band +=  1 << 6 # has no data
-    else:
-      band +=  0 << 6 # has no data
-    band +=  1 << 7 # is offdb
+    band +=  1 << 6 if nodata else 0 # has no data
+    band += 0 << 7 # is offdb
     wkb += struct.pack('<B', band)
+    wkb += struct.pack('<f', float(nodata)) # TODO: pixel type
 
     # band data
     for val in data:
-      wkb += struct.pack('<d', val)
+      wkb += struct.pack('<f', val) # TODO: adjust to take type into account
 
     return wkb.encode('hex')
