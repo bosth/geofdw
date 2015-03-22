@@ -1,4 +1,5 @@
-from geocode import FGeocode, RGeocode
-from geojson import GeoJSON
-from osrm import OSRM
-from wcs import WCS
+from multicorn import ForeignDataWrapper, Qual
+from multicorn.utils import *
+from geofdw.fdw import *
+
+__version__ = '0.1.0'

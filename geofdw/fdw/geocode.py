@@ -3,14 +3,14 @@
 geocoding module.
 """
 
-from utils import *
+from geofdw.base import *
 from shapely.geometry import Point
-from shapely import wkb
 import geopy
+from geofdw import pg
 
-class _Geocode(GeoVectorForeignDataWrapper):
+class _Geocode(GeoFDW):
   def __init__(self, options, columns):
-    super(_Geocode, self).__init__(options, columns, srid = 4326)    
+    super(_Geocode, self).__init__(options, columns, srid = 4326)
     self.service = options.get('service', 'googlev3')
     geocoder = geopy.get_geocoder_for_service(self.service)
     if geocoder == geopy.geocoders.googlev3.GoogleV3:
@@ -68,7 +68,7 @@ class FGeocode(_Geocode):
         geom && ST_GeomFromText('POLYGON(...)')
         ST_GeomFromText('POLYGON(...)') && geom
         geom @ ST_GeomFromText('POLYGON(...)')
-        ST_GeomFromText('POLYGON(...)') ~ geom 
+        ST_GeomFromText('POLYGON(...)') ~ geom
 
       Other predicates may be added, but they will be evaluated in PostgreSQL
       and not here.
@@ -94,7 +94,8 @@ class FGeocode(_Geocode):
         rank = rank + 1
         row = { 'rank' : rank }
         if col_geom:
-          row['geom'] = self.as_wkb(Point(location.latitude, location.longitude, location.altitude))
+          geom = pg.Geometry(Point(location.latitude, location.longitude, location.altitude), self.srid)
+          row['geom'] = geom.as_wkb()
         if col_addr:
           row['address'] = location.address
         if col_query:
@@ -109,9 +110,9 @@ class FGeocode(_Geocode):
         query = qual.value
 
       if qual.field_name == 'geom' and qual.operator in ['&&', '@']: # note A ~ B is transformed into B @ A
-        bounds = wkb.loads(qual.value, hex=True).bounds
+        bounds = pg.Geometry.from_wkb(qual.value).bounds()
       elif qual.value == 'geom' and qual.operator == '&&':
-        bounds = wkb.loads(qual.field_name, hex=True).bounds
+        bounds = pg.Geometry.from_wkb(qual.field_name).bounds()
 
     return query, bounds
 
@@ -165,7 +166,6 @@ class RGeocode(_Geocode):
 
     query = self._get_predicates(quals)
     if query:
-      print 'executing'
       return self._execute(columns, query)
     else:
       return []
@@ -181,21 +181,22 @@ class RGeocode(_Geocode):
       rank = rank + 1
       row = { 'rank' : rank }
       if col_geom:
-        row['geom'] = self.as_wkb(Point(location.latitude, location.longitude, location.altitude))
+        geom = pg.Geometry(Point(location.latitude, location.longitude, location.altitude), self.srid)
+        row['geom'] = geom.as_wkb()
       if col_addr:
         row['address'] = location.address
       if col_query:
-        row['query'] = self.as_wkb(query)
+        row['query'] = query.as_wkb()
       yield row
-
 
   def _get_predicates(self, quals):
     for qual in quals:
       if qual.field_name == 'query' and qual.operator == '=':
-        return wkb.loads(qual.value, hex=True)
+        return pg.Geometry.from_wkb(qual.value)
 
     return None
 
   def _get_locations(self, query):
-    log_to_postgres('GeocodeR (%s): running query "%s"' % (self.service, query.wkt), DEBUG)
-    return self.geocoder.reverse([query.x, query.y])
+    log_to_postgres('GeocodeR (%s): running query "%s"' % (self.service, query.as_wkt()), DEBUG)
+    shape = query.as_shape()
+    return self.geocoder.reverse([shape.x, shape.y])

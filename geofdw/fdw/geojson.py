@@ -2,11 +2,12 @@
 :class:`GeoJSON` is a GeoJSON foreign data wrapper.
 """
 
-from utils import *
+from geofdw.base import GeoFDW
+from geofdw import pg
 from shapely.geometry import shape
 import requests
 
-class GeoJSON(GeoVectorForeignDataWrapper):
+class GeoJSON(GeoFDW):
   """
   The GeoJSON foreign data wrapper can read the contents of an online GeoJSON
   file. The following column will exist in the table: geom GEOMETRY. Additional
@@ -22,20 +23,18 @@ class GeoJSON(GeoVectorForeignDataWrapper):
   tranforming them). The GeoJSON foreign data wrapper will *not* attempt to
   parse any CRS defined in the GeoJSON file itself.
   """
-
   def __init__(self, options, columns):
     """
     Create the table definition based on the provided column names and options.
-  
+
     :param dict options: Options passed to the table creation.
       url: location of the GeoJSON file (required)
       srid: custom SRID that overrides the 4326 default
-  
+
     :param list columns: Columns the user has specified in PostGIS.
     """
     self.url = options.get('url')
-    srid = options.get('srid', 4326)
-    super(GeoJSON, self).__init__(options, columns, srid = srid)    
+    self.srid = int(options.get('srid', 4326))
 
   def execute(self, quals, columns):
     """
@@ -45,7 +44,7 @@ class GeoJSON(GeoVectorForeignDataWrapper):
     :param list quals: List of predicates from the WHERE clause of the SQL
     statement. All filtering will happen in PostgreSQL rather than in the
     foreign data wrapper.
-    
+
     :param list columns: List of columns requested in the SELECT statement.
     """
     try:
@@ -72,7 +71,8 @@ class GeoJSON(GeoVectorForeignDataWrapper):
     for feat in features:
       row = {}
       if with_geom:
-        row['geom'] = self.as_wkb(shape(feat['geometry']))
+        geom = pg.Geometry(shape(feat['geometry']), self.srid)
+        row['geom'] = geom.as_wkb()
 
       properties = feat['properties']
       for p in properties.keys():

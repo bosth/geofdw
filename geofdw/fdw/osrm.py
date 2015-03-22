@@ -2,14 +2,14 @@
 :class:`OSRM` is an Open Source Routing Machine foreign data wrapper.
 """
 
-from utils import *
+from geofdw.base import GeoFDW
+from geofdw import pg
 from shapely.geometry import Point, LineString
-from shapely import wkb
 from polyline.codec import PolylineCodec
 
 import requests
 
-class OSRM(GeoVectorForeignDataWrapper):
+class OSRM(GeoFDW):
   """
   The OSRM foreign data wrapper can generate driving directions using an Open
   Source Routing Machine server.
@@ -22,11 +22,11 @@ class OSRM(GeoVectorForeignDataWrapper):
     Create the table definition based on the provided column names and options.
     The source and target columns are required to get any meaningful results
     from a query.
-  
+
     :param dict options: Options passed to the table creation.
       url: location of the OSRM. Defaults to the community's instance.
       zoom: default zoom level. Defaults to 14.
-  
+
     :param list columns: Columns the user has specified in PostGIS.
       geom GEOMETRY(GEOMETERY, 4326): line or point representing a segment in the route
       name TEXT: name of a way
@@ -37,7 +37,7 @@ class OSRM(GeoVectorForeignDataWrapper):
       source GEOMETRY(POINT, 4326): source point of route
       target GEOMETRY(POINT, 4326): target point of route
     """
-    super(OSRM, self).__init__(options, columns, srid = 4326)    
+    super(OSRM, self).__init__(options, columns, srid = 4326)
     zoom = int(options.get('zoom', 14))
     url = options.get('url', 'http://router.project-osrm.org/viaroute')
     self.url_base = '%s?z=%d&output=json&alt=false&instructions=true&' % (url, zoom)
@@ -66,6 +66,10 @@ class OSRM(GeoVectorForeignDataWrapper):
     self.source, self.target = self._get_predicates(quals)
     if not self.source or not self.target:
       return []
+    if self.source.srid != 4326:
+      raise Exception('Incorrect SRID:' % source.srid) # TODO
+    if self.target.srid != 4326:
+      raise Exception('Incorrect SRID:' % target.srid) # TODO
 
     url = self._get_url()
     response = requests.get(url).json()
@@ -82,23 +86,26 @@ class OSRM(GeoVectorForeignDataWrapper):
 
       if 'geom' in columns:
         if end - start < 2:
-          row['geom'] = self.as_wkb(Point(points[start]))
+          point = Point(points[start])
+          geom = pg.Geometry(point, self.srid)
         else:
-          row['geom'] = self.as_wkb(LineString(points[start:end]))
-      if 'turn' in columns: 
+          line = LineString(points[start:end])
+          geom = pg.Geometry(line, self.srid)
+      row['geom'] = geom.as_wkb()
+      if 'turn' in columns:
         row['turn'] = instructions[i][0]
-      if 'name' in columns: 
+      if 'name' in columns:
         row['name'] = instructions[i][1]
-      if 'length' in columns: 
+      if 'length' in columns:
         row['length'] = instructions[i][2]
-      if 'time' in columns: 
+      if 'time' in columns:
         row['time'] = instructions[i][4]
-      if 'azimuth' in columns: 
+      if 'azimuth' in columns:
         row['azimuth'] = instructions[i][7]
-      if 'source' in columns: 
-        row['source'] = self.as_wkb(self.source)
-      if 'target' in columns: 
-        row['target'] = self.as_wkb(self.target)
+      if 'source' in columns:
+        row['source'] = self.source.as_wkb()
+      if 'target' in columns:
+        row['target'] = self.target.as_wkb()
       yield row
 
   def _get_predicates(self, quals):
@@ -106,12 +113,12 @@ class OSRM(GeoVectorForeignDataWrapper):
     target = None
     for qual in quals:
       if qual.field_name == 'source' and qual.operator == '=':
-        source = wkb.loads(qual.value, hex=True)
+        source = pg.Geometry.from_wkb(qual.value)
       elif qual.field_name == 'target' and qual.operator == '=':
-        target = wkb.loads(qual.value, hex=True)
+        target = pg.Geometry.from_wkb(qual.value)
     return source, target
 
   def _get_url(self):
-    source = '%f,%f' % (self.source.x, self.source.y)
-    target = '%f,%f' % (self.target.x, self.target.y)
-    return self.url_base + 'loc=%s&loc=%s' % (source, target)
+    source = self.source.as_shape()
+    target = self.target.as_shape()
+    return self.url_base + 'loc=%f,%f&loc=%f,%f' % (source.x, source.y, target.x, target.y)

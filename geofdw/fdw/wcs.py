@@ -2,8 +2,9 @@
 :class:`WCS` is a WebCoverageService foreign data wrapper.
 """
 
-from utils import *
-from shapely import wkb
+from geofdw.base import GeoFDW
+from geofdw.utils import ArcGrid, crs_to_srid
+from geofdw import pg
 import requests
 
 XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -39,26 +40,19 @@ XML = """<?xml version="1.0" encoding="UTF-8"?>
 </GetCoverage>
 """
 
-class WCS(GeoRasterForeignDataWrapper):
+class WCS(GeoFDW):
   def __init__(self, options, columns):
-    super(WCS, self).__init__(options, columns)    
+    super(WCS, self).__init__(options, columns)
     version = options.get('version', '1.0.0')
     layer = options.get('layer')
     width = str(options.get('width', 256))
     height = str(options.get('height', 256))
     band = str(options.get('band', 1))
-    self.crs = options.get('crs')
-    self.srid = self.crs_to_srid(self.crs)
-    self.xml = XML.replace('$LAYER', layer).replace('$CRS', self.crs).replace('$HEIGHT', height).replace('$WIDTH', width).replace('$BAND', band)
+    crs = options.get('crs')
+    self.srid = crs_to_srid(crs)
+    self.xml = XML.replace('$LAYER', layer).replace('$CRS', crs).replace('$HEIGHT', height).replace('$WIDTH', width).replace('$BAND', band)
     self.url = options.get('url')
     self.headers = {'content-type': 'text/xml', 'Accept-Encoding': 'text' }
-
-# can estimate this
-#  def get_path_keys(self):
-#    """
-#    Query planner helper.
-#    """
-#    return [ ('rast', 1) ]
 
   def execute(self, quals, columns):
     bbox = self._get_predicates(quals)
@@ -68,14 +62,13 @@ class WCS(GeoRasterForeignDataWrapper):
       return None
 
   def _get_raster(self, bbox):
-    bounds = wkb.loads(bbox, hex=True).bounds
+    bounds = pg.Geometry.from_wkb(bbox).bounds()
     xml = self.xml.replace('$MINX', str(bounds[0])).replace('$MINY', str(bounds[1])).replace('$MAXX', str(bounds[2])).replace('$MAXY', str(bounds[3]))
     req = requests.post(self.url, headers=self.headers, data=xml)
     if req.status_code == 200:
-      grid = ArcGrid(self.srid)
-      grid.parse(req.text)
-      rast = grid.to_wkb(grid, bounds)
-      return [ { 'rast' : rast, 'geom' : bbox } ] # add geom
+      grid = ArcGrid(req.text, self.srid)
+      rast = grid.to_pg_raster(bounds)
+      return [ { 'rast' : rast.as_wkb(), 'geom' : bbox } ] # add geom
     else:
       return None
 
