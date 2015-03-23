@@ -33,16 +33,19 @@ class ArcGrid():
         header[word] = float(line[1])
       else:
         if len(line) != header['ncols']:
-          raise ArcGridParseError('Expected %d columns, found %d' % (len(v), header['ncols']))
+          raise ArcGridParseError('Expected %d columns, found %d' % (len(line), header['ncols']))
         self.data.extend(map(float, line))
 
     self.width = int(header['ncols'])
     self.height = int(header['nrows'])
+    self.llx = header['xllcorner']
+    self.lly = header['yllcorner']
+    self.cellsize = header['cellsize']
     if header.has_key('nodata_value'):
       self.nodata = float(header.get('nodata_value'))
     else:
       self.nodata = None
 
-  def to_pg_raster(self, bbox):
+  def as_pg_raster(self, bbox):
     band = pg.Band(self.data, self.nodata)
     return pg.Raster(bbox, self.height, self.width, [band], self.srid)

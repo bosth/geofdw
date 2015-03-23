@@ -67,7 +67,7 @@ class WCS(GeoFDW):
     req = requests.post(self.url, headers=self.headers, data=xml)
     if req.status_code == 200:
       grid = ArcGrid(req.text, self.srid)
-      rast = grid.to_pg_raster(bounds)
+      rast = grid.as_pg_raster(bounds)
       return [ { 'rast' : rast.as_wkb(), 'geom' : bbox } ] # add geom
     else:
       return None
