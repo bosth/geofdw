@@ -1,0 +1,1 @@
+from .randompoint import RandomPointTestCase

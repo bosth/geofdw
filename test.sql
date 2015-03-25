@@ -4,7 +4,7 @@ DROP SERVER geocode_reverse CASCADE;
 DROP SERVER osrm CASCADE;
 
 --GeoJSON
-CREATE SERVER geojson foreign data wrapper multicorn options ( wrapper 'geofdw.GeoJSON' );
+CREATE SERVER geojson foreign data wrapper multicorn options ( wrapper 'geofdw.fdws.GeoJSON' );
 CREATE FOREIGN TABLE geojson_simple ( geom GEOMETRY, name TEXT, year TEXT ) SERVER geojson OPTIONS ( url 'https://raw.githubusercontent.com/MaptimeSEA/geojson/master/Dara.geojson', srid '900913' );
 SELECT *, ST_AsText(geom) FROM geojson_simple;
 CREATE FOREIGN TABLE geojson_countries ( geom GEOMETRY, name TEXT, id TEXT ) SERVER geojson OPTIONS ( url 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json' );

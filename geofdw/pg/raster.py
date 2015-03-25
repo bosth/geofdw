@@ -1,5 +1,7 @@
 import struct
 
+from geofdw.exception import ValueBoundsError
+
 class PixelType():
 #    PT_8BSI=3,    /* 8-bit signed integer     */
 #    PT_8BUI=4,    /* 8-bit unsigned integer   */
@@ -10,27 +12,29 @@ class PixelType():
 #    PT_32BF=10,   /* 32-bit float             */
 #    PT_64BF=11,   /* 64-bit float             */
   TYPES = {
-      'b': (3, int, -2**7, 2**7-1),
-      'B': (4, int, 0, 2**8-1),
-      'h': (5, int, -2**15, 2**15-1),
-      'H': (6, int, 0, 2**16-1),
-      'i': (7, int, -2**31, 2**31-1),
-      'I': (8, int, 0, 2**32-1),
-      'f': (10, float, -3.402823466e+38, 3.402823466e+38),
-      'd': (11, float, -1.7976931348623158e+308, 1.7976931348623158e+308)
+      'b': (3,  -2**7, 2**7-1),
+      'B': (4,   0, 2**8-1),
+      'h': (5,  -2**15, 2**15-1),
+      'H': (6,   0, 2**16-1),
+      'i': (7,  -2**31, 2**31-1),
+      'I': (8,   0, 2**32-1),
+      'f': (10, -3.402823466e+38, 3.402823466e+38),
+      'd': (11, -1.7976931348623158e+308, 1.7976931348623158e+308)
       }
 
   def __init__(self, struct_type = 'b'):
     self._struct_type = struct_type
 
   @classmethod
-  def from_data(cls, data, nodata):
+  def from_data(cls, data, nodata = None):
     val_min = 0
     val_max = 0
 
     # find min, max and whether floats are necessary
+    vals = [nodata] if nodata != None else []
+    vals += data
     needs_float = False
-    for val in [nodata] + data:
+    for val in vals:
       if not needs_float and type(val) == float and not val.is_integer():
         needs_float = True
       else:
@@ -39,11 +43,11 @@ class PixelType():
       val_max = max(val_max, val)
 
     # other cases when floats are necessary: 'i' and 'I' are not viable for min and max
-    if 0 < val_min and val_max > PixelType.TYPES.get('I')[3]:
+    if val_max > PixelType.TYPES.get('I')[2]:
       needs_float = True
-    elif val_min < 0 and val_max > PixelType.TYPES.get('i')[3]:
+    elif val_min <= 0 and val_max > PixelType.TYPES.get('i')[2]:
       needs_float = True
-    elif val_min < PixelType.TYPES.get('i')[2]:
+    elif val_min < PixelType.TYPES.get('i')[1]:
       needs_float = True
 
     # find best type for min and max
@@ -55,14 +59,11 @@ class PixelType():
   def as_pg(self):
     return PixelType.TYPES.get(self._struct_type)[0]
 
-  def as_py(self):
-    return PixelType.TYPES.get(self._struct_type)[1]
-
   @staticmethod
   def _good_type(pix_type, val):
     type_info = PixelType.TYPES.get(pix_type)
-    type_min = type_info[2]
-    type_max = type_info[3]
+    type_min = type_info[1]
+    type_max = type_info[2]
     return val >= type_min and val <= type_max
 
   @staticmethod
@@ -77,7 +78,7 @@ class PixelType():
     for pix_type in pix_type_opt:
       if PixelType._good_type(pix_type, val_min) and PixelType._good_type(pix_type, val_max):
         return pix_type
-    raise Exception('Value out of bounds')
+    raise ValueBoundsError('Data range (%d, %d) out of bounds' % (val_min, val_max))
 
 class Band():
   def __init__(self, data, nodata = None, pix_type = None):
@@ -124,8 +125,6 @@ class Raster():
 
     # band meta data
     for band in self.bands:
-      #py_type = band.pix_type.as_py() # don't think i need this since pack auto converts;
-      # TODO remove python types from TYPES dict
       pg_type = band.pix_type.as_pg()
       st_type = '<%s' % band.pix_type.as_struct()
       byte  = 0

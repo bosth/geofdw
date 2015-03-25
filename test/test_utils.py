@@ -44,7 +44,7 @@ CELLSIZE 1.0
 
   def test_crs_to_srid_none(self):
     """
-    Test converting missing CRS to a SRID
+    crs_to_srid converting missing CRS to a SRID
     """
     srid = crs_to_srid(None)
     self.assertEquals(srid, None)
@@ -52,21 +52,21 @@ CELLSIZE 1.0
 
   def test_crs_to_srid_lower(self):
     """
-    Test converting lower-case CRS to a SRID
+    crs_to_srid converting lower-case CRS to a SRID
     """
     srid = crs_to_srid('epsg:4326')
     self.assertEquals(srid, 4326)
 
   def test_crs_to_srid_upper(self):
     """
-    Test converting upper-case CRS to a SRID
+    crs_to_srid converting upper-case CRS to a SRID
     """
     srid = crs_to_srid('EPSG:4326')
     self.assertEquals(srid, 4326)
 
   def test_read_arcgrid_1(self):
     """
-    Test parsing an ArcGrid with nodata and SRID
+    ArcGrid parsing file with nodata and SRID
     """
     grid = ArcGrid(self.grid_text_1, 4326)
     self.assertEquals(grid.width, 8)
@@ -80,7 +80,7 @@ CELLSIZE 1.0
 
   def test_read_arcgrid_2(self):
     """
-    Test parsing an ArcGrid without nodata or SRID
+    ArcGrid parsing file without nodata and SRID
     """
     grid = ArcGrid(self.grid_text_2)
     self.assertEquals(grid.width, 4)
@@ -94,13 +94,13 @@ CELLSIZE 1.0
 
   def test_read_arcgrid_3(self):
     """
-    Test parsing an invalid ArcGrid
+    ArcGrid parsing invalid file
     """
     self.assertRaises(ArcGridParseError, ArcGrid, self.grid_text_3)
 
   def test_to_pg_raster(self):
     """
-    Test converting an ArcGrid to a PostGIS raster
+    ArcGrid exporting to PostGIS raster
     """
     grid = ArcGrid(self.grid_text_1, 4326)
     raster = grid.as_pg_raster((30, 30, 38, 34))

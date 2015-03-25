@@ -1,4 +1,5 @@
 from geofdw.base import GeoFDW
+from geofdw.exception import MissingOptionError, OptionTypeError, OptionValueError
 from geofdw.pg.geometry import Geometry
 from shapely.geometry import Point
 import random
@@ -20,13 +21,20 @@ class RandomPoint(GeoFDW):
       num: Number of points (optional)
       srid: SRID of the points (optional)
     """
-    self.min_x = float(options.get('min_x'))
-    self.min_y = float(options.get('min_y'))
-    self.max_x = float(options.get('max_x'))
-    self.max_y = float(options.get('max_y'))
-    self.num = int(options.get('num', 1))
+    try:
+      self.min_x = float(options['min_x'])
+      self.min_y = float(options['min_y'])
+      self.max_x = float(options['max_x'])
+      self.max_y = float(options['max_y'])
+      self.num = int(options.get('num', 1))
+    except KeyError as e:
+      raise MissingOptionError(e)
+    except ValueError as e:
+      raise OptionTypeError(e)
+    if self.max_x <= self.min_x or self.max_y <= self.min_y:
+      raise OptionValueError('min must be smaller than max')
     srid = options.get('srid', None)
-    super(RandomPoint, self).__init__(options, columns, srid)    
+    super(RandomPoint, self).__init__(options, columns, srid)
 
   def execute(self, quals, columns):
     for i in range(self.num):
