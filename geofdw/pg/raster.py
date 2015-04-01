@@ -11,22 +11,21 @@ class PixelType():
 #    PT_32BUI=8,   /* 32-bit unsigned integer  */
 #    PT_32BF=10,   /* 32-bit float             */
 #    PT_64BF=11,   /* 64-bit float             */
-  TYPES = {
-      'b': (3,  -2**7, 2**7-1),
-      'B': (4,   0, 2**8-1),
-      'h': (5,  -2**15, 2**15-1),
-      'H': (6,   0, 2**16-1),
-      'i': (7,  -2**31, 2**31-1),
-      'I': (8,   0, 2**32-1),
-      'f': (10, -3.402823466e+38, 3.402823466e+38),
-      'd': (11, -1.7976931348623158e+308, 1.7976931348623158e+308)
-      }
+  TYPES = {'b': (3,  -2**7,  2**7-1),
+           'B': (4,   0,     2**8-1),
+           'h': (5,  -2**15, 2**15-1),
+           'H': (6,   0,     2**16-1),
+           'i': (7,  -2**31, 2**31-1),
+           'I': (8,   0,     2**32-1),
+           'f': (10, -3.402823466e+38, 3.402823466e+38),
+           'd': (11, -1.7976931348623158e+308, 1.7976931348623158e+308)
+          }
 
-  def __init__(self, struct_type = 'b'):
-    self._struct_type = struct_type
+  def __init__(self, struct_type='b'):
+      self._struct_type = struct_type
 
   @classmethod
-  def from_data(cls, data, nodata = None):
+  def from_data(cls, data, nodata=None):
     val_min = 0
     val_max = 0
 
@@ -42,7 +41,8 @@ class PixelType():
       val_min = min(val_min, val)
       val_max = max(val_max, val)
 
-    # other cases when floats are necessary: 'i' and 'I' are not viable for min and max
+    # other cases when floats are necessary: 'i' and 'I' are not viable for
+    # min and max
     if val_max > PixelType.TYPES.get('I')[2]:
       needs_float = True
     elif val_min <= 0 and val_max > PixelType.TYPES.get('i')[2]:
@@ -67,7 +67,7 @@ class PixelType():
     return val >= type_min and val <= type_max
 
   @staticmethod
-  def _best_type(val_min, val_max, needs_float = False):
+  def _best_type(val_min, val_max, needs_float=False):
     if needs_float or type(val_min) == float or type(val_max) == float:
       pix_type_opt = ['f', 'd']
     elif val_min < 0:
@@ -81,7 +81,7 @@ class PixelType():
     raise ValueBoundsError('Data range (%d, %d) out of bounds' % (val_min, val_max))
 
 class Band():
-  def __init__(self, data, nodata = None, pix_type = None):
+  def __init__(self, data, nodata=None, pix_type=None):
     self.data = data
     self.nodata = nodata
     if pix_type == None:
@@ -90,7 +90,7 @@ class Band():
       self.pix_type = pix_type
 
 class Raster():
-  def __init__(self, bbox, height, width, bands, srid = None, skewx = 0, skewy = 0):
+  def __init__(self, bbox, height, width, bands, srid=None, skewx=0, skewy=0):
     self.bands = bands
     self.srid = srid
     self.width = width
@@ -109,35 +109,37 @@ class Raster():
       srid = 0
 
     # meta data (some unnecessary stuff here)
-    wkb = ''
-    wkb += struct.pack('<b', 1) # endianness
-    wkb += struct.pack('<H', 0) # version
-    wkb += struct.pack('<H', len(self.bands)) # num bands
-    wkb += struct.pack('<d', self.scalex) # scale x
-    wkb += struct.pack('<d', self.scaley) # scale y
-    wkb += struct.pack('<d', self.ulx) # upper left x
-    wkb += struct.pack('<d', self.uly) # upper left y
-    wkb += struct.pack('<d', self.skewx) # skew x
-    wkb += struct.pack('<d', self.skewy) # skey y
-    wkb += struct.pack('<i', srid) # SRID
-    wkb += struct.pack('<H', self.width) # width
-    wkb += struct.pack('<H', self.height) # height
-
+    byte_list_types = 'bHHddddddiHHB'
+    byte_list = []
+    byte_list.append(1) # endianness
+    byte_list.append(0) # version
+    byte_list.append(len(self.bands)) # num bands
+    byte_list.append(self.scalex) # scale x
+    byte_list.append(self.scaley) # scale y
+    byte_list.append(self.ulx) # upper left x
+    byte_list.append(self.uly) # upper left y
+    byte_list.append(self.skewx) # skew x
+    byte_list.append(self.skewy) # skey y
+    byte_list.append(srid) # SRID
+    byte_list.append(self.width) # width
+    byte_list.append(self.height) # height
     # band meta data
     for band in self.bands:
       pg_type = band.pix_type.as_pg()
-      st_type = '<%s' % band.pix_type.as_struct()
-      byte  = 0
-      byte += pg_type << 0
+      st_type = band.pix_type.as_struct()
+      byte = 0
+      byte += pg_type << 0 # type
       byte += 0 << 4 # reserved bit
       byte += 0 << 5 # is no data
       byte += 1 << 6 if not band.nodata == None else 0 # has no data
       byte += 0 << 7 # is offdb
-      wkb += struct.pack('<B', byte)
-      wkb += struct.pack(st_type, band.nodata if not band.nodata == None else 0)
+      byte_list_types += 'B%c%d%c' % (st_type, len(band.data), st_type)
+      byte_list.append(byte)
+      byte_list.append(band.nodata if not band.nodata == None else 0)
 
       # band data
       for val in band.data:
-        wkb += struct.pack(st_type, val)
+        byte_list.append(val)
 
+    wkb = struct.pack(byte_list_types, *byte_list)
     return wkb.encode('hex')
