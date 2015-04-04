@@ -81,14 +81,44 @@ class PixelTypeTestCase(unittest.TestCase):
     self.assertRaises(ValueBoundsError, PixelType.from_data, b)
 
 class BandTestCase(unittest.TestCase):
-  pass
+  def test_custom_pix_type(self):
+    """
+    pg.Band use custom pixel type
+    """
+    pt = PixelType('f')
+    b = Band([], None, pt)
+    self.assertEquals(pt.as_struct(), 'f')
 
 class RasterTestCase(unittest.TestCase):
+  def test_wkb_single_band(self):
+    """
+    pg.Raster test single band WKB export
+    """
+    b1 = pg.Band([0, 1, 2, 3], -9999)
+    raster = Raster((0, 0, -10, 10), 2, 2, [b1], 4326)
+    self.assertEquals(raster.as_wkb(), '010000010000000000000014c000000000000014400000000000000000000000000000244000000000000000000000000000000000e61000000200020045f1d80000010002000300')
 
-  def test_read_arcgrid_1(self):
+  def test_wkb_multiple_bands(self):
     """
-    pg.Raster test
+    pg.Raster test multiple band WKB export
     """
-    b1 = pg.Band([0, 1, 2, 3], 0)
-    b2 = pg.Band([0, 1, 2, 3], 0)
+    b1 = pg.Band([0, 1, 2, 3], -9999)
+    b2 = pg.Band([0, -1, -2, -3], 0)
     raster = Raster((0, 0, -10, 10), 2, 2, [b1, b2], 4326)
+    self.assertEquals(raster.as_wkb(), '010000020000000000000014c000000000000014400000000000000000000000000000244000000000000000000000000000000000e61000000200020045f1d80000010002000300430000fffefd')
+
+  def test_wkb_no_nodata(self):
+    """
+    pg.Raster test no nodata value
+    """
+    b1 = pg.Band([0, 1, 2, 3])
+    raster = Raster((0, 0, -10, 10), 2, 2, [b1], 4326)
+    self.assertEquals(raster.as_wkb(), '010000010000000000000014c000000000000014400000000000000000000000000000244000000000000000000000000000000000e610000002000200040000010203')
+
+  def test_wkb_no_srid(self):
+    """
+    pg.Raster test no SRID
+    """
+    b1 = pg.Band([0, 1, 2, 3], -9999)
+    raster = Raster((0, 0, -10, 10), 2, 2, [b1])
+    self.assertEquals(raster.as_wkb(), '010000010000000000000014c000000000000014400000000000000000000000000000244000000000000000000000000000000000000000000200020045f1d80000010002000300')
