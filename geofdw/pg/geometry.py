@@ -14,6 +14,9 @@ class Geometry():
   a Shapely geometry, WKB or EWKT.
   """
   def __init__(self, shape, srid):
+    """
+    Note: use one of from_shape(), from_wkb, from_wkt since this might change in future.
+    """
     if not issubclass(type(shape), BaseGeometry):
       raise InvalidGeometryError('Geometry can not be None')
     self._shape = shape

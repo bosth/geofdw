@@ -109,7 +109,7 @@ class Raster():
       srid = 0
 
     # meta data (some unnecessary stuff here)
-    byte_list_types = 'bHHddddddiHHB'
+    byte_list_types = '<bHHddddddiHH'
     byte_list = []
     byte_list.append(1) # endianness
     byte_list.append(0) # version
@@ -131,11 +131,15 @@ class Raster():
       byte += pg_type << 0 # type
       byte += 0 << 4 # reserved bit
       byte += 0 << 5 # is no data
-      byte += 1 << 6 if not band.nodata == None else 0 # has no data
+      if not band.nodata == None:
+        byte += 1 << 6 # has no data
       byte += 0 << 7 # is offdb
       byte_list_types += 'B%c%d%c' % (st_type, len(band.data), st_type)
       byte_list.append(byte)
-      byte_list.append(band.nodata if not band.nodata == None else 0)
+      if band.nodata == None:
+        byte_list.append(0)
+      else:
+        byte_list.append(band.nodata)
 
       # band data
       for val in band.data:
