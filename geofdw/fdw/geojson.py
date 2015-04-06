@@ -3,6 +3,7 @@
 """
 
 from geofdw.base import GeoFDW
+from geofdw.exception import MissingOptionError, OptionTypeError
 from geofdw import pg
 from shapely.geometry import shape
 import requests
@@ -33,8 +34,14 @@ class GeoJSON(GeoFDW):
 
     :param list columns: Columns the user has specified in PostGIS.
     """
-    self.url = options.get('url')
-    self.srid = int(options.get('srid', 4326))
+    try:
+      self.url = options['url']
+    except KeyError as e:
+      raise MissingOptionError(e)
+    try:
+      self.srid = int(options.get('srid', 4326))
+    except ValueError as e:
+      raise OptionTypeError(e)
 
   def execute(self, quals, columns):
     """
