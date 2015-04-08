@@ -3,7 +3,7 @@
 """
 
 from geofdw.base import GeoFDW
-from geofdw.exception import MissingOptionError, OptionTypeError
+from geofdw.exception import MissingColumnError, MissingOptionError, OptionTypeError
 from geofdw import pg
 from shapely.geometry import shape
 import requests
@@ -31,9 +31,15 @@ class GeoJSON(GeoFDW):
     :param dict options: Options passed to the table creation.
       url: location of the GeoJSON file (required)
       srid: custom SRID that overrides the 4326 default
+      verify: set to false to ignore invalid SSL certificates
+      user: user name for authentication
+      pass: password for authentication
 
     :param list columns: Columns the user has specified in PostGIS.
     """
+    if not 'geom' in columns:
+      raise MissingColumnError
+
     try:
       self.url = options['url']
     except KeyError as e:
@@ -42,6 +48,16 @@ class GeoJSON(GeoFDW):
       self.srid = int(options.get('srid', 4326))
     except ValueError as e:
       raise OptionTypeError(e)
+
+    if options.has_key('verify'):
+      self.verify = options.get('verify').lower() in ['1', 't', 'true']
+    else:
+      self.verify = True
+
+    if options.has_key('user') and options.has_key('pass'):
+      self.auth = (options.get('user'), options.get('pass'))
+    else:
+      self.auth = None
 
   def execute(self, quals, columns):
     """
@@ -55,31 +71,32 @@ class GeoJSON(GeoFDW):
     :param list columns: List of columns requested in the SELECT statement.
     """
     try:
-      response = requests.get(self.url)
-    except requests.exceptions.InvalidURL as e:
-      log_to_postgres('GeoJSON FDW: invalid URL %s' % self.url, WARNING)
-      return []
+      response = requests.get(self.url, auth=self.auth, verify=self.verify)
     except requests.exceptions.ConnectionError as e:
-      log_to_postgres('GeoJSON FDW: unable to connect to %s' % self.url, WARNING)
+      self.log('GeoJSON FDW: unable to connect to %s' % self.url)
       return []
-    except requests.exceptions.Timeout as e:
-      log_to_postgres('GeoJSON FDW: timeout connecting to %s' % self.url, WARNING)
+    except requests.exceptions.Timeout as e: #pragma: no cover
+      self.log('GeoJSON FDW: timeout connecting to %s' % self.url)
       return []
 
-    return self._execute(response.json()['features'], columns)
+    try:
+      data = response.json()
+    except ValueError as e:
+      self.log('GeoJSON FDW: invalid JSON')
+      return []
+    try:
+      features = data['features']
+    except KeyError as e:
+      self.log('GeoJSON FDW: invalid GeoJSON')
+      return []
+    return self._execute(features, columns)
 
   def _execute(self, features, columns):
-    if 'geom' in columns:
-      columns.remove('geom')
-      with_geom = True
-    else:
-      with_geom = False
-
+    columns.remove('geom')
     for feat in features:
       row = {}
-      if with_geom:
-        geom = pg.Geometry(shape(feat['geometry']), self.srid)
-        row['geom'] = geom.as_wkb()
+      geom = pg.Geometry(shape(feat['geometry']), self.srid)
+      row['geom'] = geom.as_wkb()
 
       properties = feat['properties']
       for p in properties.keys():
@@ -87,5 +104,4 @@ class GeoJSON(GeoFDW):
           if col == p or col == p.lower():
             row[col] = properties.get(p)
             break
-
       yield row
