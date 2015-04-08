@@ -3,7 +3,9 @@ class MissingColumnError(Exception):
   Required column missing from either __init__ or execute (e.g. GeoJSON FDW
   requires a geom column).
   """
-  pass
+  def __init__(self, column):
+    message = 'Missing column "%s"' % column
+    super(MissingColumnError, self).__init__(message)
 
 class MissingQueryPreciateError(Exception):
   """

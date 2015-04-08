@@ -36,9 +36,10 @@ class GeoJSON(GeoFDW):
       pass: password for authentication
 
     :param list columns: Columns the user has specified in PostGIS.
+      geom (required)
     """
     if not 'geom' in columns:
-      raise MissingColumnError
+      raise MissingColumnError('geom')
 
     try:
       self.url = options['url']
