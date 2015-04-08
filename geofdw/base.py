@@ -1,5 +1,6 @@
 from multicorn import ForeignDataWrapper, Qual
-from multicorn.utils import *
+from multicorn.utils import log_to_postgres
+from logging import ERROR, INFO, DEBUG, WARNING, CRITICAL
 
 class GeoFDW(ForeignDataWrapper):
   def __init__(self, options, columns, srid = None):
@@ -11,3 +12,6 @@ class GeoFDW(ForeignDataWrapper):
       self.srid = int(srid)
     else:
       self.srid = None
+
+  def log(self, message, level=WARNING):
+    log_to_postgres(message, level)
