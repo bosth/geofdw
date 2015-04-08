@@ -13,7 +13,7 @@ class GeoJSONTestCase(unittest.TestCase):
   EXAMPLE = 'https://raw.githubusercontent.com/colemanm/hurricanes/master/fl_2004_hurricanes.geojson'
   def test_missing_url(self):
     """
-    GeoJSON.__init__ missing url
+    fdw.GeoJSON.__init__ missing url
     """
     options = {}
     columns = ['geom']
@@ -21,7 +21,7 @@ class GeoJSONTestCase(unittest.TestCase):
 
   def test_missing_geom_column(self):
     """
-    GeoJSON.__init__ missing geometry column
+    fdw.GeoJSON.__init__ missing geometry column
     """
     options = {'url' : self.EXAMPLE}
     columns = []
@@ -29,7 +29,7 @@ class GeoJSONTestCase(unittest.TestCase):
 
   def test_srid(self):
     """
-    GeoJSON.__init__ set custom SRID
+    fdw.GeoJSON.__init__ set custom SRID
     """
     options = {'url' : self.EXAMPLE, 'srid' : '900913'}
     columns = ['geom']
@@ -38,7 +38,7 @@ class GeoJSONTestCase(unittest.TestCase):
 
   def test_invalid_srid(self):
     """
-    GeoJSON.__init__ set invalid SRID
+    fdw.GeoJSON.__init__ set invalid SRID
     """
     options = {'url' : self.EXAMPLE, 'srid' : 'EPSG:900913'}
     columns = ['geom']
@@ -46,7 +46,7 @@ class GeoJSONTestCase(unittest.TestCase):
 
   def test_verify_ssl(self):
     """
-    GeoJSON.__init__ enable SSL verify
+    fdw.GeoJSON.__init__ enable SSL verify
     """
     options = {'url' : self.EXAMPLE, 'verify' : 'true'}
     columns = ['geom']
@@ -55,7 +55,7 @@ class GeoJSONTestCase(unittest.TestCase):
 
   def test_no_verify_ssl(self):
     """
-    GeoJSON.__init__ disable SSL verify
+    fdw.GeoJSON.__init__ disable SSL verify
     """
     options = {'url' : self.EXAMPLE, 'verify' : 'false'}
     columns = ['geom']
@@ -64,7 +64,7 @@ class GeoJSONTestCase(unittest.TestCase):
 
   def test_authentication(self):
     """
-    GeoJSON.__init__ use authentication
+    fdw.GeoJSON.__init__ use authentication
     """
     options = {'url' : self.EXAMPLE, 'user' : 'name', 'pass' : 'secret'}
     columns = ['geom']
@@ -73,7 +73,7 @@ class GeoJSONTestCase(unittest.TestCase):
 
   def test_no_authentication(self):
     """
-    GeoJSON.__init__ disable authentication
+    fdw.GeoJSON.__init__ disable authentication
     """
     options = {'url' : self.EXAMPLE}
     columns = ['geom']
@@ -82,7 +82,7 @@ class GeoJSONTestCase(unittest.TestCase):
 
   def test_execute_bad_url(self):
     """
-    GeoJSON.execute non-existant URL
+    fdw.GeoJSON.execute non-existant URL
     """
     options = {'url' : 'http://d.xyz'}
     columns = ['geom']
@@ -92,7 +92,7 @@ class GeoJSONTestCase(unittest.TestCase):
 
   def test_not_json(self):
     """
-    GeoJSON.execute receive non-JSON response
+    fdw.GeoJSON.execute receive non-JSON response
     """
     options = {'url' : 'http://raw.githubusercontent.com'}
     columns = ['geom']
@@ -102,7 +102,7 @@ class GeoJSONTestCase(unittest.TestCase):
 
   def test_not_geojson(self):
     """
-    GeoJSON.execute receive non-GeoJSON response
+    fdw.GeoJSON.execute receive non-GeoJSON response
     """
     options = {'url' : 'https://raw.githubusercontent.com/fge/sample-json-schemas/master/json-home/json-home.json'}
     columns = ['geom']
@@ -112,7 +112,7 @@ class GeoJSONTestCase(unittest.TestCase):
 
   def test_geojson(self):
     """
-    GeoJSON.execute receive GeoJSON response
+    fdw.GeoJSON.execute receive GeoJSON response
     """
     options = {'url' : self.EXAMPLE}
     columns = ['geom']
@@ -123,7 +123,7 @@ class GeoJSONTestCase(unittest.TestCase):
 
   def test_geojson_attribute(self):
     """
-    GeoJSON.execute receive GeoJSON response with non-spatial attribute
+    fdw.GeoJSON.execute receive GeoJSON response with non-spatial attribute
     """
     options = {'url' : self.EXAMPLE}
     columns = ['geom', 'NAME']

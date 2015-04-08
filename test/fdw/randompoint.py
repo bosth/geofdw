@@ -11,7 +11,7 @@ from geofdw.exception import MissingOptionError, OptionTypeError, OptionValueErr
 class RandomPointTestCase(unittest.TestCase):
   def test_missing_option(self):
     """
-    RandomPoint.__init__ missing option
+    fdw.RandomPoint.__init__ missing option
     """
     options = {}
     columns = ['geom']
@@ -19,7 +19,7 @@ class RandomPointTestCase(unittest.TestCase):
 
   def test_bad_option_type(self):
     """
-    RandomPoint.__init__ incorrect option type
+    fdw.RandomPoint.__init__ incorrect option type
     """
     options = {'min_x':'test'}
     columns = ['geom']
@@ -27,7 +27,7 @@ class RandomPointTestCase(unittest.TestCase):
 
   def test_bad_option_value(self):
     """
-    RandomPoint.__init__ incorrect option value
+    fdw.RandomPoint.__init__ incorrect option value
     """
     options = {'min_x':1, 'max_x':0, 'min_y':0, 'max_y':1}
     columns = ['geom']
@@ -35,7 +35,7 @@ class RandomPointTestCase(unittest.TestCase):
 
   def test_options(self):
     """
-    RandomPoint.__init__ options
+    fdw.RandomPoint.__init__ options
     """
     options = {'min_x':10, 'max_x':20, 'min_y':30, 'max_y':40, 'num': 99, 'srid':4326}
     columns = ['geom']
@@ -49,7 +49,7 @@ class RandomPointTestCase(unittest.TestCase):
 
   def test_execute(self):
     """
-    RandomPoint.execute check results
+    fdw.RandomPoint.execute check results
     """
     options = {'min_x':10, 'max_x':20, 'min_y':30, 'max_y':40, 'num': 99, 'srid':4326}
     columns = ['geom']
@@ -57,6 +57,5 @@ class RandomPointTestCase(unittest.TestCase):
     rows = fdw.execute([], columns)
     for row in rows:
       point = Geometry.from_wkb(row['geom']).as_shape()
-      print point
       self.assertTrue(10 <= point.x <= 20)
       self.assertTrue(30 <= point.y <= 40)

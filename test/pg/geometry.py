@@ -11,13 +11,13 @@ from shapely.geometry import Point
 class GeometryTestCase(unittest.TestCase):
   def test_missing_shape(self):
     """
-    Geometry.__init__ missing shape
+    pg.Geometry.__init__ missing shape
     """
     self.assertRaises(InvalidGeometryError, Geometry, None, None)
 
   def test_from_shape(self):
     """
-    Geometry.from_shape load
+    pg.Geometry.from_shape load
     """
     point = Point(0, 0)
     geom = Geometry.from_shape(point, 4326)
@@ -26,7 +26,7 @@ class GeometryTestCase(unittest.TestCase):
 
   def test_from_shape_nosrid(self):
     """
-    Geometry.from_shape load without SRID
+    pg.Geometry.from_shape load without SRID
     """
     point = Point(0, 0)
     geom = Geometry.from_shape(point)
@@ -36,14 +36,14 @@ class GeometryTestCase(unittest.TestCase):
 
   def test_from_wkb_invalid(self):
     """
-    Geometry.from_wkb load invalid WKB
+    pg.Geometry.from_wkb load invalid WKB
     """
     wkb = '11110008066C00000000000000000'
     self.assertRaises(InvalidGeometryError, Geometry.from_wkb, wkb)
 
   def test_from_wkb(self):
     """
-    Geometry.from_wkb load WKB
+    pg.Geometry.from_wkb load WKB
     """
     wkb = '0101000020E610000000000000008066C00000000000000000'
     geom = Geometry.from_wkb(wkb)
@@ -52,14 +52,14 @@ class GeometryTestCase(unittest.TestCase):
 
   def test_from_wkt_invalid(self):
     """
-    Geometry.from_wkt load invalid WKT
+    pg.Geometry.from_wkt load invalid WKT
     """
     wkt = 'LINESTRING(-180 0)'
     self.assertRaises(InvalidGeometryError, Geometry.from_wkt, wkt)
 
   def test_from_wkt(self):
     """
-    Geometry.from_wkt load WKB
+    pg.Geometry.from_wkt load WKB
     """
     wkt = 'POINT (-180 0)'
     geom = Geometry.from_wkt(wkt, 4326)
@@ -68,7 +68,7 @@ class GeometryTestCase(unittest.TestCase):
 
   def test_from_ewkt(self):
     """
-    Geometry.from_ewkt load EWKT
+    pg.Geometry.from_ewkt load EWKT
     """
     ewkt = 'SRID=4326;POINT (-180 0)'
     geom = Geometry.from_ewkt(ewkt)
@@ -77,7 +77,7 @@ class GeometryTestCase(unittest.TestCase):
 
   def test_from_ewkt_nosrid(self):
     """
-    Geometry.from_ewkt load without SRID
+    pg.Geometry.from_ewkt load without SRID
     """
     ewkt = 'POINT (-180 0)'
     geom = Geometry.from_ewkt(ewkt)
@@ -86,7 +86,7 @@ class GeometryTestCase(unittest.TestCase):
 
   def test_as_ewkt_nosrid(self):
     """
-    Geometry.as_ewkt output EWKT without SRID
+    pg.Geometry.as_ewkt output EWKT without SRID
     """
     ewkt = 'POINT (-180 0)'
     geom = Geometry.from_ewkt(ewkt)
@@ -94,7 +94,7 @@ class GeometryTestCase(unittest.TestCase):
 
   def test_as_ewkt(self):
     """
-    Geometry.as_ewkt output EWKT
+    pg.Geometry.as_ewkt output EWKT
     """
     ewkt = 'SRID=4326;POINT (-180 0)'
     geom = Geometry.from_ewkt(ewkt)
@@ -102,7 +102,7 @@ class GeometryTestCase(unittest.TestCase):
 
   def test_as_wkt(self):
     """
-    Geometry.as_wkt output WKT
+    pg.Geometry.as_wkt output WKT
     """
     wkt = 'POINT (-180 0)'
     geom = Geometry.from_wkt(wkt)
@@ -110,7 +110,7 @@ class GeometryTestCase(unittest.TestCase):
 
   def test_bounds(self):
     """
-    Geometry.bounds get geometry bounds
+    pg.Geometry.bounds get geometry bounds
     """
     wkb = '01020000000200000000000000000000000000000000000000000000000000F03F000000000000F03F'
     geom = Geometry.from_wkb(wkb)
@@ -118,7 +118,7 @@ class GeometryTestCase(unittest.TestCase):
 
   def test_equals(self):
     """
-    Geometry.equals test geometries
+    pg.Geometry.equals test geometries
     """
     wkb = '0102000020E61000000200000000000000000000000000000000000000000000000000F03F000000000000F03F'
     geom_1 = Geometry.from_wkb(wkb)
@@ -128,7 +128,7 @@ class GeometryTestCase(unittest.TestCase):
 
   def test_equals_nosrid(self):
     """
-    Geometry.equals test geometries without SRID
+    pg.Geometry.equals test geometries without SRID
     """
     wkb = '0102000020E61000000200000000000000000000000000000000000000000000000000F03F000000000000F03F'
     geom_1 = Geometry.from_wkb(wkb)
@@ -138,7 +138,7 @@ class GeometryTestCase(unittest.TestCase):
 
   def test_equals_nosrid(self):
     """
-    Geometry.equals test different geometries
+    pg.Geometry.equals test different geometries
     """
     wkb = '0102000020E61000000200000000000000000000000000000000000000000000000000F03F000000000000F03F'
     geom_1 = Geometry.from_wkb(wkb)
