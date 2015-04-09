@@ -128,6 +128,6 @@ class GeoJSONTestCase(unittest.TestCase):
     options = {'url' : self.EXAMPLE}
     columns = ['geom', 'NAME']
     fdw = GeoJSON(options, columns)
-    rows = fdw.execute([], columns)
+    rows = fdw.execute([], ['NAME'])
     for row in rows:
       self.assertIn(row['NAME'], ['Alex', 'Bonnie', 'Charley', 'Danielle', 'Earl', 'Frances', 'Gaston', 'Hermine', 'Ivan', 'Tropical Depression 2', 'Tropical Depression 10', 'Jeanne', 'Karl', 'Lisa', 'Matthew', 'Nicole', 'Otto'])
