@@ -38,27 +38,10 @@ class GeoJSON(GeoFDW):
     :param list columns: Columns the user has specified in PostGIS.
       geom (required)
     """
-    if not 'geom' in columns:
-      raise MissingColumnError('geom')
-
-    try:
-      self.url = options['url']
-    except KeyError as e:
-      raise MissingOptionError(e)
-    try:
-      self.srid = int(options.get('srid', 4326))
-    except ValueError as e:
-      raise OptionTypeError(e)
-
-    if options.has_key('verify'):
-      self.verify = options.get('verify').lower() in ['1', 't', 'true']
-    else:
-      self.verify = True
-
-    if options.has_key('user') and options.has_key('pass'):
-      self.auth = (options.get('user'), options.get('pass'))
-    else:
-      self.auth = None
+    self.check_column(columns, 'geom')
+    self.url = self.get_option(options, 'url')
+    self.srid = self.get_option(options, 'srid', required=False, default=4326, option_type=int)
+    self.get_web_service_options(options)
 
   def execute(self, quals, columns):
     """
@@ -93,11 +76,16 @@ class GeoJSON(GeoFDW):
     return self._execute(features, columns)
 
   def _execute(self, features, columns):
-    columns.remove('geom')
+    if 'geom' in columns:
+      columns.remove('geom')
+      use_geom = True
+    else:
+      use_geom = False
     for feat in features:
       row = {}
-      geom = pg.Geometry(shape(feat['geometry']), self.srid)
-      row['geom'] = geom.as_wkb()
+      if use_geom:
+        geom = pg.Geometry(shape(feat['geometry']), self.srid)
+        row['geom'] = geom.as_wkb()
 
       properties = feat['properties']
       for p in properties.keys():

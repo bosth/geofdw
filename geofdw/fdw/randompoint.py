@@ -6,7 +6,7 @@ import random
 
 class RandomPoint(GeoFDW):
   """
-  The RandomPoint foreign data wrapper creates a certain number of random points.
+  The RandomPoint foreign data wrapper creates a number of random points.
   """
   def __init__(self, options, columns):
     """
@@ -14,26 +14,26 @@ class RandomPoint(GeoFDW):
     single column geom of type GEOMETRY(POINT).
 
     :param dict options: Options passed to the table creation.
-      min_x: Minimum value for x
-      min_y: Minimum value for y
-      max_x: Maximum value for x
-      max_y: Maximum value for y
-      num: Number of points (optional)
-      srid: SRID of the points (optional)
+      min_x: Minimum value for x (required)
+      min_y: Minimum value for y (required)
+      max_x: Maximum value for x (required)
+      max_y: Maximum value for y (required)
+      num: Number of points
+      srid: SRID of the points
+
+     :param list columns:
+       geom (required)
     """
-    try:
-      self.min_x = float(options['min_x'])
-      self.min_y = float(options['min_y'])
-      self.max_x = float(options['max_x'])
-      self.max_y = float(options['max_y'])
-      self.num = int(options.get('num', 1))
-    except KeyError as e:
-      raise MissingOptionError(e)
-    except ValueError as e:
-      raise OptionTypeError(e)
+    self.check_column(columns, 'geom')
+    self.min_x = self.get_option(options, 'min_x', option_type=float)
+    self.min_y = self.get_option(options, 'min_y', option_type=float)
+    self.max_x = self.get_option(options, 'max_x', option_type=float)
+    self.max_y = self.get_option(options, 'max_y', option_type=float)
+    self.num = self.get_option(options, 'num', required=False, default=1, option_type=int)
+    srid = self.get_option(options, 'srid', required=False)
+
     if self.max_x <= self.min_x or self.max_y <= self.min_y:
       raise OptionValueError('min must be smaller than max')
-    srid = options.get('srid', None)
     super(RandomPoint, self).__init__(options, columns, srid)
 
   def execute(self, quals, columns):

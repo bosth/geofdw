@@ -4,6 +4,7 @@
 
 from geofdw.base import GeoFDW
 from geofdw.utils import ArcGrid, crs_to_srid
+from geofdw.exception import MissingQueryPredicateError
 from geofdw import pg
 import requests
 
@@ -43,30 +44,37 @@ XML = """<?xml version="1.0" encoding="UTF-8"?>
 class WCS(GeoFDW):
   def __init__(self, options, columns):
     super(WCS, self).__init__(options, columns)
-    version = options.get('version', '1.0.0')
-    layer = options.get('layer')
-    width = str(options.get('width', 256))
-    height = str(options.get('height', 256))
-    band = str(options.get('band', 1))
-    crs = options.get('crs')
+    self.check_column(columns, 'raster')
+    self.check_column(columns, 'geom')
+    self.url = self.get_option(options, 'url')
+    layer = self.get_option(options, 'layer')
+    crs = self.get_option(options, 'crs')
     self.srid = crs_to_srid(crs)
+    width = self.get_option(options, 'width', required=False, default='256')
+    height = self.get_option(options, 'height', required=False, default='256')
+    band = self.get_option(options, 'band', required=False, default='1')
     self.xml = XML.replace('$LAYER', layer).replace('$CRS', crs).replace('$HEIGHT', height).replace('$WIDTH', width).replace('$BAND', band)
-    self.url = options.get('url')
     self.headers = {'content-type': 'text/xml', 'Accept-Encoding': 'text' }
+    self.get_web_service_options(options)
 
   def execute(self, quals, columns):
     bbox = self._get_predicates(quals)
-    if bbox:
-      return self._get_raster(bbox)
-    else:
-      return None
+    return self._get_raster(bbox)
 
   def _get_raster(self, bbox):
     bounds = pg.Geometry.from_wkb(bbox).bounds()
     xml = self.xml.replace('$MINX', str(bounds[0])).replace('$MINY', str(bounds[1])).replace('$MAXX', str(bounds[2])).replace('$MAXY', str(bounds[3]))
-    req = requests.post(self.url, headers=self.headers, data=xml)
-    if req.status_code == 200:
-      grid = ArcGrid(req.text, self.srid)
+    try:
+      response = requests.post(self.url, headers=self.headers, data=xml, auth=self.auth, verify=self.verify)
+    except requests.exceptions.ConnectionError as e:
+      self.log('WCS FDW: unable to connect to %s' % self.url)
+      return []
+    except requests.exceptions.Timeout as e: #pragma: no cover
+      self.log('WCS FDW: timeout connecting to %s' % self.url)
+      return []
+
+    if response.status_code == 200:
+      grid = ArcGrid(response.text, self.srid)
       rast = grid.as_pg_raster(bounds)
       return [ { 'rast' : rast.as_wkb(), 'geom' : bbox } ] # add geom
     else:
@@ -78,4 +86,4 @@ class WCS(GeoFDW):
         return qual.value
       elif qual.value == 'geom' and qual.operator in ['=', '~=']:
         return qual.field_name
-    return None
+    raise MissingQueryPredicateError('Query predicate with "geom" column is required')

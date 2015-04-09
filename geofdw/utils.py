@@ -1,13 +1,16 @@
 from cStringIO import StringIO
-import re
 import sys
 from geofdw import pg
+from geofdw.exception import CRSError
 
 def crs_to_srid(crs):
   if crs == None:
     return None
-  srid = re.sub(re.escape('epsg:'), '', crs, flags=re.I)
-  return int(srid)
+  srid = crs.lower().replace('epsg:', '')
+  try:
+    return int(srid)
+  except ValueError as e:
+    raise CRSError(crs)
 
 class ArcGridParseError(Exception):
   pass
