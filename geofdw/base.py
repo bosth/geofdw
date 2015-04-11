@@ -4,39 +4,37 @@ from logging import ERROR, INFO, DEBUG, WARNING, CRITICAL
 from geofdw.exception import MissingColumnError, MissingOptionError, OptionTypeError
 
 class GeoFDW(ForeignDataWrapper):
-  def __init__(self, options, columns, srid=None):
+  def __init__(self, options, columns):
     super(GeoFDW, self).__init__(options, columns)
-    self.use_srid(srid)
+    self.options = options
+    self.columns = columns
 
-  def check_column(self, columns, column):
-    if not column in columns:
-      raise MissingColumnError(column)
+  def check_columns(self, columns):
+    for column in columns:
+      if column not in self.columns:
+        raise MissingColumnError(column)
 
-  def get_option(self, options, option, required=True, default=None, option_type=str):
-    if required and not option in options:
+  def get_option(self, option, required=True, default=None, option_type=str):
+    if required and not option in self.options:
       raise MissingOptionError(option)
-    value = options.get(option, default)
+    value = self.options.get(option, default)
+    if value == None:
+      return None
     try:
       return option_type(value)
     except ValueError as e:
       raise OptionTypeError(option, option_type)
 
-  def get_web_service_options(self, options):
-    if options.has_key('verify'):
-      self.verify = options.get('verify').lower() in ['1', 't', 'true']
+  def get_request_options(self):
+    if self.options.has_key('verify'):
+      self.verify = self.options.get('verify').lower() in ['1', 't', 'true']
     else:
       self.verify = True
 
-    if options.has_key('user') and options.has_key('pass'):
-      self.auth = (options.get('user'), options.get('pass'))
+    if self.options.has_key('user') and self.options.has_key('pass'):
+      self.auth = (self.options.get('user'), self.options.get('pass'))
     else:
       self.auth = None
-
-  def use_srid(self, srid):
-    if srid:
-      self.srid = int(srid)
-    else:
-      self.srid = None
 
   def log(self, message, level=WARNING):
     log_to_postgres(message, level)

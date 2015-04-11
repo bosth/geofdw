@@ -24,17 +24,17 @@ class RandomPoint(GeoFDW):
      :param list columns:
        geom (required)
     """
-    self.check_column(columns, 'geom')
-    self.min_x = self.get_option(options, 'min_x', option_type=float)
-    self.min_y = self.get_option(options, 'min_y', option_type=float)
-    self.max_x = self.get_option(options, 'max_x', option_type=float)
-    self.max_y = self.get_option(options, 'max_y', option_type=float)
-    self.num = self.get_option(options, 'num', required=False, default=1, option_type=int)
-    srid = self.get_option(options, 'srid', required=False)
+    super(RandomPoint, self).__init__(options, columns)
+    self.check_columns(['geom'])
+    self.min_x = self.get_option('min_x', option_type=float)
+    self.min_y = self.get_option('min_y', option_type=float)
+    self.max_x = self.get_option('max_x', option_type=float)
+    self.max_y = self.get_option('max_y', option_type=float)
+    self.num = self.get_option('num', required=False, default=1, option_type=int)
+    self.srid = self.get_option('srid', required=False, option_type=int)
 
     if self.max_x <= self.min_x or self.max_y <= self.min_y:
       raise OptionValueError('min must be smaller than max')
-    super(RandomPoint, self).__init__(options, columns, srid)
 
   def execute(self, quals, columns):
     for i in range(self.num):

@@ -44,18 +44,17 @@ XML = """<?xml version="1.0" encoding="UTF-8"?>
 class WCS(GeoFDW):
   def __init__(self, options, columns):
     super(WCS, self).__init__(options, columns)
-    self.check_column(columns, 'raster')
-    self.check_column(columns, 'geom')
-    self.url = self.get_option(options, 'url')
-    layer = self.get_option(options, 'layer')
-    crs = self.get_option(options, 'crs')
+    self.check_columns(['raster', 'geom'])
+    self.url = self.get_option('url')
+    layer = self.get_option('layer')
+    crs = self.get_option('crs')
     self.srid = crs_to_srid(crs)
-    width = self.get_option(options, 'width', required=False, default='256')
-    height = self.get_option(options, 'height', required=False, default='256')
-    band = self.get_option(options, 'band', required=False, default='1')
+    width = self.get_option('width', required=False, default='256')
+    height = self.get_option('height', required=False, default='256')
+    band = self.get_option('band', required=False, default='1')
     self.xml = XML.replace('$LAYER', layer).replace('$CRS', crs).replace('$HEIGHT', height).replace('$WIDTH', width).replace('$BAND', band)
     self.headers = {'content-type': 'text/xml', 'Accept-Encoding': 'text' }
-    self.get_web_service_options(options)
+    self.get_request_options()
 
   def execute(self, quals, columns):
     bbox = self._get_predicates(quals)

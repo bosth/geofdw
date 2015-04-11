@@ -38,10 +38,11 @@ class GeoJSON(GeoFDW):
     :param list columns: Columns the user has specified in PostGIS.
       geom (required)
     """
-    self.check_column(columns, 'geom')
-    self.url = self.get_option(options, 'url')
-    self.srid = self.get_option(options, 'srid', required=False, default=4326, option_type=int)
-    self.get_web_service_options(options)
+    super(GeoJSON, self).__init__(options, columns)
+    self.check_columns(['geom'])
+    self.url = self.get_option('url')
+    self.srid = self.get_option('srid', required=False, default=4326, option_type=int)
+    self.get_request_options()
 
   def execute(self, quals, columns):
     """
