@@ -6,7 +6,7 @@ import unittest
 
 from multicorn import Qual
 from geofdw.fdw import WCS
-from geofdw.pg import Raster
+from pypg import Raster
 from geofdw.exception import CRSError, MissingColumnError, MissingOptionError, MissingQueryPredicateError
 
 class WCSTestCase(unittest.TestCase):

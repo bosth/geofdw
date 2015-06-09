@@ -4,7 +4,7 @@
 
 from geofdw.base import GeoFDW
 from geofdw.exception import MissingColumnError, MissingOptionError, OptionTypeError
-from geofdw import pg
+import pypg
 from shapely.geometry import shape
 import requests
 
@@ -85,7 +85,7 @@ class GeoJSON(GeoFDW):
     for feat in features:
       row = {}
       if use_geom:
-        geom = pg.Geometry(shape(feat['geometry']), self.srid)
+        geom = pypg.Geometry(shape(feat['geometry']), self.srid)
         row['geom'] = geom.as_wkb()
 
       properties = feat['properties']

@@ -2,8 +2,8 @@
 :class:`OSRM` is an Open Source Routing Machine foreign data wrapper.
 """
 
+import pypg
 from geofdw.base import GeoFDW
-from geofdw import pg
 from shapely.geometry import Point, LineString
 from polyline.codec import PolylineCodec
 
@@ -87,10 +87,10 @@ class OSRM(GeoFDW):
       if 'geom' in columns:
         if end - start < 2:
           point = Point(points[start])
-          geom = pg.Geometry(point, self.srid)
+          geom = pypg.Geometry(point, self.srid)
         else:
           line = LineString(points[start:end])
-          geom = pg.Geometry(line, self.srid)
+          geom = pypg.Geometry(line, self.srid)
       row['geom'] = geom.as_wkb()
       if 'turn' in columns:
         row['turn'] = instructions[i][0]
@@ -113,9 +113,9 @@ class OSRM(GeoFDW):
     target = None
     for qual in quals:
       if qual.field_name == 'source' and qual.operator == '=':
-        source = pg.Geometry.from_wkb(qual.value)
+        source = pypg.Geometry.from_wkb(qual.value)
       elif qual.field_name == 'target' and qual.operator == '=':
-        target = pg.Geometry.from_wkb(qual.value)
+        target = pypg.Geometry.from_wkb(qual.value)
     return source, target
 
   def _get_url(self):

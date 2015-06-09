@@ -4,8 +4,8 @@ Test randompoint fdw
 
 import unittest
 
+from pypg import Geometry
 from geofdw.fdw import RandomPoint
-from geofdw.pg import Geometry
 from geofdw.exception import MissingOptionError, OptionTypeError, OptionValueError
 
 class RandomPointTestCase(unittest.TestCase):

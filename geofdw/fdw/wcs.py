@@ -5,7 +5,7 @@
 from geofdw.base import GeoFDW
 from geofdw.utils import ArcGrid, crs_to_srid
 from geofdw.exception import MissingQueryPredicateError
-from geofdw import pg
+import pypg
 import requests
 
 XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -61,7 +61,7 @@ class WCS(GeoFDW):
     return self._get_raster(bbox)
 
   def _get_raster(self, bbox):
-    bounds = pg.Geometry.from_wkb(bbox).bounds()
+    bounds = pypg.Geometry.from_wkb(bbox).bounds()
     xml = self.xml.replace('$MINX', str(bounds[0])).replace('$MINY', str(bounds[1])).replace('$MAXX', str(bounds[2])).replace('$MAXY', str(bounds[3]))
     try:
       response = requests.post(self.url, headers=self.headers, data=xml, auth=self.auth, verify=self.verify)

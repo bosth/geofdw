@@ -1,6 +1,6 @@
 from geofdw.base import GeoFDW
 from geofdw.exception import MissingOptionError, OptionTypeError, OptionValueError
-from geofdw.pg.geometry import Geometry
+import pypg
 from shapely.geometry import Point
 import random
 
@@ -41,5 +41,5 @@ class RandomPoint(GeoFDW):
       x = random.uniform(self.min_x, self.max_x)
       y = random.uniform(self.min_y, self.max_y)
       point = Point(x, y)
-      geom = Geometry(point, self.srid)
+      geom = pypg.Geometry(point, self.srid)
       yield { 'geom' : geom.as_wkb() }

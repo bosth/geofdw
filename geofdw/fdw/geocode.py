@@ -6,7 +6,7 @@ geocoding module.
 from geofdw.base import *
 from shapely.geometry import Point
 import geopy
-from geofdw import pg
+import pypg
 
 class _Geocode(GeoFDW):
   def __init__(self, options, columns):
@@ -94,7 +94,7 @@ class FGeocode(_Geocode):
         rank = rank + 1
         row = { 'rank' : rank }
         if col_geom:
-          geom = pg.Geometry(Point(location.latitude, location.longitude, location.altitude), self.srid)
+          geom = pypg.Geometry(Point(location.latitude, location.longitude, location.altitude), self.srid)
           row['geom'] = geom.as_wkb()
         if col_addr:
           row['address'] = location.address
@@ -110,9 +110,9 @@ class FGeocode(_Geocode):
         query = qual.value
 
       if qual.field_name == 'geom' and qual.operator in ['&&', '@']: # note A ~ B is transformed into B @ A
-        bounds = pg.Geometry.from_wkb(qual.value).bounds()
+        bounds = pypg.Geometry.from_wkb(qual.value).bounds()
       elif qual.value == 'geom' and qual.operator == '&&':
-        bounds = pg.Geometry.from_wkb(qual.field_name).bounds()
+        bounds = pypg.Geometry.from_wkb(qual.field_name).bounds()
 
     return query, bounds
 
@@ -181,7 +181,7 @@ class RGeocode(_Geocode):
       rank = rank + 1
       row = { 'rank' : rank }
       if col_geom:
-        geom = pg.Geometry(Point(location.latitude, location.longitude, location.altitude), self.srid)
+        geom = pypg.Geometry(Point(location.latitude, location.longitude, location.altitude), self.srid)
         row['geom'] = geom.as_wkb()
       if col_addr:
         row['address'] = location.address
@@ -192,7 +192,7 @@ class RGeocode(_Geocode):
   def _get_predicates(self, quals):
     for qual in quals:
       if qual.field_name == 'query' and qual.operator == '=':
-        return pg.Geometry.from_wkb(qual.value)
+        return pypg.Geometry.from_wkb(qual.value)
 
     return None
 

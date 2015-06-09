@@ -4,10 +4,11 @@ from logging import ERROR, INFO, DEBUG, WARNING, CRITICAL
 from geofdw.exception import MissingColumnError, MissingOptionError, OptionTypeError
 
 class GeoFDW(ForeignDataWrapper):
-  def __init__(self, options, columns):
+  def __init__(self, options, columns, srid=None):
     super(GeoFDW, self).__init__(options, columns)
     self.options = options
     self.columns = columns
+    self.srid = srid
 
   def check_columns(self, columns):
     for column in columns:

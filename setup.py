@@ -24,7 +24,7 @@ def read(*filenames, **kwargs):
       buf.append(f.read())
   return sep.join(buf)
 
-long_description = read('README.txt', 'CHANGES.txt')
+long_description = read()
 
 class PyTest(TestCommand):
   def finalize_options(self):
@@ -46,12 +46,12 @@ setup(
     tests_require=['pytest'],
     cmdclass={'test': PyTest},
     author_email='bosth@alumni.sfu.ca',
-    description='',
+    description='Foreign Data Wrappers for PostGIS',
     long_description=long_description,
     packages=['geofdw'],
     include_package_data=True,
     platforms='any',
-    test_suite='test.test_geofdw',
+    test_suite='test.geofdw',
     classifiers = [
     ],
     install_requires = [
@@ -59,7 +59,8 @@ setup(
       'Shapely>=1.5.0'
       'polyline>=1.1',
       'geopy>=1.9.1',
-      'requests>=2.4.0']
+      'requests>=2.4.0',
+      'pypg>=0.1'
     ],
     extras_require = {
       'testing': ['pytest']

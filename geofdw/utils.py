@@ -1,6 +1,6 @@
 from cStringIO import StringIO
 import sys
-from geofdw import pg
+import pypg
 from geofdw.exception import CRSError
 
 def crs_to_srid(crs):
@@ -50,5 +50,5 @@ class ArcGrid():
       self.nodata = None
 
   def as_pg_raster(self, bbox):
-    band = pg.Band(self.data, self.nodata)
-    return pg.Raster(bbox, self.height, self.width, [band], self.srid)
+    band = pypg.Band(self.data, self.nodata)
+    return pypg.Raster(bbox, self.height, self.width, [band], self.srid)
