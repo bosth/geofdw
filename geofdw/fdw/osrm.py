@@ -91,7 +91,7 @@ class OSRM(GeoFDW):
         else:
           line = LineString(points[start:end])
           geom = pypg.Geometry(line, self.srid)
-      row['geom'] = geom.as_wkb()
+      row['geom'] = geom.ewkb
       if 'turn' in columns:
         row['turn'] = instructions[i][0]
       if 'name' in columns:
@@ -103,9 +103,9 @@ class OSRM(GeoFDW):
       if 'azimuth' in columns:
         row['azimuth'] = instructions[i][7]
       if 'source' in columns:
-        row['source'] = self.source.as_wkb()
+        row['source'] = self.source.ewkb
       if 'target' in columns:
-        row['target'] = self.target.as_wkb()
+        row['target'] = self.target.ewkb
       yield row
 
   def _get_predicates(self, quals):
@@ -119,6 +119,6 @@ class OSRM(GeoFDW):
     return source, target
 
   def _get_url(self):
-    source = self.source.as_shape()
-    target = self.target.as_shape()
+    source = self.source.shape
+    target = self.target.shape
     return self.url_base + 'loc=%f,%f&loc=%f,%f' % (source.x, source.y, target.x, target.y)

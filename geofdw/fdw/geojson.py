@@ -86,7 +86,7 @@ class GeoJSON(GeoFDW):
       row = {}
       if use_geom:
         geom = pypg.Geometry(shape(feat['geometry']), self.srid)
-        row['geom'] = geom.as_wkb()
+        row['geom'] = geom.ewkb
 
       properties = feat['properties']
       for p in properties.keys():

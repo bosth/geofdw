@@ -95,7 +95,7 @@ class FGeocode(_Geocode):
         row = { 'rank' : rank }
         if col_geom:
           geom = pypg.Geometry(Point(location.latitude, location.longitude, location.altitude), self.srid)
-          row['geom'] = geom.as_wkb()
+          row['geom'] = geom.ewkb
         if col_addr:
           row['address'] = location.address
         if col_query:
@@ -182,11 +182,11 @@ class RGeocode(_Geocode):
       row = { 'rank' : rank }
       if col_geom:
         geom = pypg.Geometry(Point(location.latitude, location.longitude, location.altitude), self.srid)
-        row['geom'] = geom.as_wkb()
+        row['geom'] = geom.ewkb
       if col_addr:
         row['address'] = location.address
       if col_query:
-        row['query'] = query.as_wkb()
+        row['query'] = query.ewkb
       yield row
 
   def _get_predicates(self, quals):
@@ -197,6 +197,6 @@ class RGeocode(_Geocode):
     return None
 
   def _get_locations(self, query):
-    log_to_postgres('GeocodeR (%s): running query "%s"' % (self.service, query.as_wkt()), DEBUG)
-    shape = query.as_shape()
+    log_to_postgres('GeocodeR (%s): running query "%s"' % (self.service, query.wkt), DEBUG)
+    shape = query.shape
     return self.geocoder.reverse([shape.x, shape.y])

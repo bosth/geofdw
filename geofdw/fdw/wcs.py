@@ -75,7 +75,7 @@ class WCS(GeoFDW):
     if response.status_code == 200:
       grid = ArcGrid(response.text, self.srid)
       rast = grid.as_pg_raster(bounds)
-      return [ { 'rast' : rast.as_wkb(), 'geom' : bbox } ] # add geom
+      return [ { 'rast' : rast.ewkb(), 'geom' : bbox } ] # add geom
     else:
       return None
 
