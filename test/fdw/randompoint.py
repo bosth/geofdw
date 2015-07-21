@@ -56,6 +56,6 @@ class RandomPointTestCase(unittest.TestCase):
     fdw = RandomPoint(options, columns)
     rows = fdw.execute([], columns)
     for row in rows:
-      point = Geometry.from_wkb(row['geom']).as_shape()
+      point = Geometry.from_wkb(row['geom']).shape
       self.assertTrue(10 <= point.x <= 20)
       self.assertTrue(30 <= point.y <= 40)

@@ -108,5 +108,4 @@ CELLSIZE 1.0
     self.assertEquals(grid.width, raster.width)
     self.assertEquals(grid.height, raster.height)
     self.assertEquals(grid.llx, raster.ulx)
-    self.assertNotEqual(grid.lly, raster.uly)
     self.assertEquals(len(raster.bands), 1)

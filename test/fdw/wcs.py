@@ -8,6 +8,7 @@ from multicorn import Qual
 from geofdw.fdw import WCS
 from pypg import Raster
 from geofdw.exception import CRSError, MissingColumnError, MissingOptionError, MissingQueryPredicateError
+from requests.exceptions import ConnectionError, Timeout
 
 class WCSTestCase(unittest.TestCase):
   def test_missing_column_raster(self):
@@ -85,9 +86,9 @@ class WCSTestCase(unittest.TestCase):
     fdw = WCS(options, columns)
     self.assertRegexpMatches(fdw.xml, '<singleValue>2</singleValue>')
 
-  def test_execute_geom_predicate_A(self):
+  def test_geom_predicate_A(self):
     """
-    fdw.WCS.execute geom = B
+    fdw.WCS._get_predicates geom = B
     """
     options = {'url' : '', 'layer' : '', 'crs' : 'EPSG:4326', 'band' : '2'}
     columns = ['raster', 'geom']
@@ -96,9 +97,9 @@ class WCSTestCase(unittest.TestCase):
     value = fdw._get_predicates([qual])
     self.assertEquals(value, 'xyz')
 
-  def test_execute_geom_predicate_B(self):
+  def test_geom_predicate_B(self):
     """
-    fdw.WCS.execute A = geom
+    fdw.WCS._get_predicates A = geom
     """
     options = {'url' : '', 'layer' : '', 'crs' : 'EPSG:4326', 'band' : '2'}
     columns = ['raster', 'geom']
@@ -107,7 +108,7 @@ class WCSTestCase(unittest.TestCase):
     value = fdw._get_predicates([qual])
     self.assertEquals(value, 'xyz')
 
-  def test_execute_geom_predicate_missing(self):
+  def test_geom_predicate_missing(self):
     """
     fdw.WCS.execute missing geom predicate
     """
@@ -117,3 +118,13 @@ class WCSTestCase(unittest.TestCase):
     fdw = WCS(options, columns)
     self.assertRaises(MissingQueryPredicateError, fdw._get_predicates, [qual])
 
+  def test_no_connect(self):
+    """
+    fdw.WCS._get_raster bad connection
+    """
+    options = {'url' : 'http://non-existant-url.net', 'layer' : '', 'crs' : 'EPSG:4326', 'band' : '2'}
+    columns = ['raster', 'geom']
+    qual = Qual('010100000000000000000000000000000000000000', '=', 'geom')
+    fdw = WCS(options, columns)
+    result = fdw.execute([qual], columns)
+    self.assertListEqual(result, [])
