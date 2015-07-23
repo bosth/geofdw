@@ -61,7 +61,8 @@ class WCS(GeoFDW):
     return self._get_raster(bbox)
 
   def _get_raster(self, bbox):
-    bounds = pypg.Geometry.from_wkb(bbox).bounds()
+    shape, srid = pypg.geometry.postgis.to_shape(bbox)
+    bounds = shape.bounds
     xml = self.xml.replace('$MINX', str(bounds[0])).replace('$MINY', str(bounds[1])).replace('$MAXX', str(bounds[2])).replace('$MAXY', str(bounds[3]))
     try:
       response = requests.post(self.url, headers=self.headers, data=xml, auth=self.auth, verify=self.verify)

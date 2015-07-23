@@ -41,5 +41,5 @@ class RandomPoint(GeoFDW):
       x = random.uniform(self.min_x, self.max_x)
       y = random.uniform(self.min_y, self.max_y)
       point = Point(x, y)
-      geom = pypg.Geometry(point, self.srid)
-      yield { 'geom' : geom.ewkb }
+      geom = pypg.geometry.shape.to_postgis(point, self.srid)
+      yield { 'geom' : geom }

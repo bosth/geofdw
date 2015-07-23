@@ -6,7 +6,6 @@ import unittest
 
 from multicorn import Qual
 from geofdw.fdw import WCS
-from pypg import Raster
 from geofdw.exception import CRSError, MissingColumnError, MissingOptionError, MissingQueryPredicateError
 from requests.exceptions import ConnectionError, Timeout
 

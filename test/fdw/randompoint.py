@@ -4,7 +4,7 @@ Test randompoint fdw
 
 import unittest
 
-from pypg import Geometry
+import pypg.geometry
 from geofdw.fdw import RandomPoint
 from geofdw.exception import MissingOptionError, OptionTypeError, OptionValueError
 
@@ -56,6 +56,6 @@ class RandomPointTestCase(unittest.TestCase):
     fdw = RandomPoint(options, columns)
     rows = fdw.execute([], columns)
     for row in rows:
-      point = Geometry.from_wkb(row['geom']).shape
+      point, srid = pypg.geometry.postgis.to_shape(row['geom'])
       self.assertTrue(10 <= point.x <= 20)
       self.assertTrue(30 <= point.y <= 40)

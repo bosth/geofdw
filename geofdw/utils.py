@@ -50,5 +50,5 @@ class ArcGrid():
       self.nodata = None
 
   def as_pg_raster(self, bbox):
-    band = pypg.Band(self.data, self.nodata)
-    return pypg.Raster(bbox, self.height, self.width, [band], self.srid)
+    band = pypg.raster.Band(self.data, self.nodata)
+    return pypg.raster.Raster(bbox, self.height, self.width, [band], self.srid)

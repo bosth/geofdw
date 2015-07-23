@@ -4,7 +4,6 @@ Test GeoJSON fdw
 
 import unittest
 
-from pypg import Geometry
 from geofdw.fdw import GeoJSON
 from geofdw.exception import MissingColumnError, MissingOptionError, OptionTypeError
 

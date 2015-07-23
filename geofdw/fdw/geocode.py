@@ -10,7 +10,7 @@ import pypg
 
 class _Geocode(GeoFDW):
   def __init__(self, options, columns):
-    super(_Geocode, self).__init__(options, columns, srid = 4326)
+    super(_Geocode, self).__init__(options, columns, srid=4326)
     self.service = options.get('service', 'googlev3')
     geocoder = geopy.get_geocoder_for_service(self.service)
     if geocoder == geopy.geocoders.googlev3.GoogleV3:
@@ -94,8 +94,8 @@ class FGeocode(_Geocode):
         rank = rank + 1
         row = { 'rank' : rank }
         if col_geom:
-          geom = pypg.Geometry(Point(location.latitude, location.longitude, location.altitude), self.srid)
-          row['geom'] = geom.ewkb
+          geom = pypg.geometry.shape.to_postgis(Point(location.latitude, location.longitude, location.altitude), self.srid)
+          row['geom'] = geom
         if col_addr:
           row['address'] = location.address
         if col_query:
@@ -110,9 +110,11 @@ class FGeocode(_Geocode):
         query = qual.value
 
       if qual.field_name == 'geom' and qual.operator in ['&&', '@']: # note A ~ B is transformed into B @ A
-        bounds = pypg.Geometry.from_wkb(qual.value).bounds()
+        shape, srid = pypg.geometry.postgis.to_shape(qual.value)
+        bounds = shape.bounds
       elif qual.value == 'geom' and qual.operator == '&&':
-        bounds = pypg.Geometry.from_wkb(qual.field_name).bounds()
+        shape, srid = pypg.geometry.postgis.to_shape(qual.field_name)
+        bounds = shape.bounds
 
     return query, bounds
 
@@ -181,22 +183,22 @@ class RGeocode(_Geocode):
       rank = rank + 1
       row = { 'rank' : rank }
       if col_geom:
-        geom = pypg.Geometry(Point(location.latitude, location.longitude, location.altitude), self.srid)
-        row['geom'] = geom.ewkb
+        geom = pypg.geometry.shape.to_postgis(Point(location.latitude, location.longitude, location.altitude), self.srid)
+        row['geom'] = geom
       if col_addr:
         row['address'] = location.address
       if col_query:
-        row['query'] = query.ewkb
+        row['query'] = pypg.geometry.shape.to_postgis(query, self.srid)
       yield row
 
   def _get_predicates(self, quals):
     for qual in quals:
       if qual.field_name == 'query' and qual.operator == '=':
-        return pypg.Geometry.from_wkb(qual.value)
+        shape, srid = pypg.geometry.postgis.to_shape(qual.value)
+        return shape
 
     return None
 
   def _get_locations(self, query):
     log_to_postgres('GeocodeR (%s): running query "%s"' % (self.service, query.wkt), DEBUG)
-    shape = query.shape
-    return self.geocoder.reverse([shape.x, shape.y])
+    return self.geocoder.reverse([query.x, query.y])

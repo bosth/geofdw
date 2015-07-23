@@ -37,7 +37,7 @@ class OSRM(GeoFDW):
       source GEOMETRY(POINT, 4326): source point of route
       target GEOMETRY(POINT, 4326): target point of route
     """
-    super(OSRM, self).__init__(options, columns, srid = 4326)
+    super(OSRM, self).__init__(options, columns, srid=4326)
     zoom = int(options.get('zoom', 14))
     url = options.get('url', 'http://router.project-osrm.org/viaroute')
     self.url_base = '%s?z=%d&output=json&alt=false&instructions=true&' % (url, zoom)
@@ -63,12 +63,14 @@ class OSRM(GeoFDW):
     Generally, there is no need to request the 'source' and 'target' columns
     when querying the OSRM FDW.
     """
-    self.source, self.target = self._get_predicates(quals)
+    source, target = self._get_predicates(quals)
+    self.source = source[0]
+    self.target = target[0]
     if not self.source or not self.target:
       return []
-    if self.source.srid != 4326:
+    if source[1] != 4326:
       raise Exception('Incorrect SRID:' % source.srid) # TODO
-    if self.target.srid != 4326:
+    if target[1] != 4326:
       raise Exception('Incorrect SRID:' % target.srid) # TODO
 
     url = self._get_url()
@@ -87,11 +89,11 @@ class OSRM(GeoFDW):
       if 'geom' in columns:
         if end - start < 2:
           point = Point(points[start])
-          geom = pypg.Geometry(point, self.srid)
+          geom = pypg.geometry.shape.to_postgis(point, self.srid)
         else:
           line = LineString(points[start:end])
-          geom = pypg.Geometry(line, self.srid)
-      row['geom'] = geom.ewkb
+          geom = pypg.geometry.shape.to_postgis(line, self.srid)
+      row['geom'] = geom
       if 'turn' in columns:
         row['turn'] = instructions[i][0]
       if 'name' in columns:
@@ -103,9 +105,11 @@ class OSRM(GeoFDW):
       if 'azimuth' in columns:
         row['azimuth'] = instructions[i][7]
       if 'source' in columns:
-        row['source'] = self.source.ewkb
+        wkb = pypg.geometry.shape.to_postgis(self.source)
+        row['source'] = wkb
       if 'target' in columns:
-        row['target'] = self.target.ewkb
+        wkb = pypg.geometry.shape.to_postgis(self.target)
+        row['target'] = wkb
       yield row
 
   def _get_predicates(self, quals):
@@ -113,12 +117,12 @@ class OSRM(GeoFDW):
     target = None
     for qual in quals:
       if qual.field_name == 'source' and qual.operator == '=':
-        source = pypg.Geometry.from_wkb(qual.value)
+        source = pypg.geometry.postgis.to_shape(qual.value)
       elif qual.field_name == 'target' and qual.operator == '=':
-        target = pypg.Geometry.from_wkb(qual.value)
+        target = pypg.geometry.postgis.to_shape(qual.value)
     return source, target
 
   def _get_url(self):
-    source = self.source.shape
-    target = self.target.shape
+    source = self.source
+    target = self.target
     return self.url_base + 'loc=%f,%f&loc=%f,%f' % (source.x, source.y, target.x, target.y)

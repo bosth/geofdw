@@ -85,8 +85,8 @@ class GeoJSON(GeoFDW):
     for feat in features:
       row = {}
       if use_geom:
-        geom = pypg.Geometry(shape(feat['geometry']), self.srid)
-        row['geom'] = geom.ewkb
+        geom = pypg.geometry.shape.to_postgis(shape(feat['geometry']), self.srid)
+        row['geom'] = geom
 
       properties = feat['properties']
       for p in properties.keys():
