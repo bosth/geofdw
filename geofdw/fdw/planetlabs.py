@@ -39,26 +39,19 @@ class PlanetScenes(GeoFDW):
       :param list columns: List of columns requested in the SELECT statement.
       """
       aoi, filters = self._get_predicates(quals)
-      print aoi
-      print filters
       scenes = self.client.get_scenes_list(intersects=aoi, **filters).get()
       if scenes['count'] > 0:
-          print 'count',scenes['count']
           for feature in scenes['features']:
               geom = feature['geometry']
               row = {}
-              for k,v in feature['properties'].iteritems():
+              for k, v in feature['properties'].iteritems():
                   row[k] = json.dumps(v)
               row['geom'] = pypg.geometry.shape.to_postgis(geom, self.srid)
               yield row
 
-    def _execute(self, columns):
-        return []
-
     def _get_predicates(self, quals):
         shape = None
         filters = {}
-        print quals
         for qual in quals:
             if qual.field_name == 'geom':
                 if qual.operator in ['&&']:
@@ -88,8 +81,8 @@ class PlanetScenes(GeoFDW):
         if shape:
             if srid != 4326:
                  raise InvalidGeometryError('Planet API only accepts geometries using an SRID of 4326.')
-            aoi = pypg.geometry.shape.to_geojson(box(*shape.bounds))
+            aoi = pypg.geometry.shape.to_wkt(box(*shape.bounds))
         else:
             aoi = None
 
-        return json.dumps(aoi), filters
+        return aoi, filters
