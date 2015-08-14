@@ -27,14 +27,40 @@ class PlanetScenes(GeoFDW):
         api_key = self.get_option('api_key', required=True)
         self.client = api.Client(api_key=api_key)
 
+    OPERATORS = {'=':'eq', '<':'lt', '<=':'lte', '>':'gt', '>=':'gte'}
+    PROPERTIES = {
+        'camera.bit_depth': (['='], list, [8, 12]),
+        'camera.color_mode': (['='], list, ['RGB', 'Monochromatic']),
+        'camera.exposure_time': (['=', '<', '<=', '>', '>='], int), # error with float
+        'camera.gain': (['=', '<', '<=', '>', '>='], int), # error with float
+        'camera.tdi_pulses': (['=', '<', '<=', '>', '>='], int),
+        'cloud_cover.estimated': (['=', '<', '<=', '>', '>='], float),
+        'image_statistics.gsd': (['=', '<', '<=', '>', '>='], float),
+        'image_statistics.image_quality': (['>='], list, ['test', 'standard', 'target']),
+        'image_statistics.snr': (['=', '<', '<=', '>', '>='], float),
+        'sat.alt': (['=', '<', '<=', '>', '>='], float),
+        'sat.id': (['='], int),
+        'sat.lat': (['=', '<', '<=', '>', '>='], float),
+        'sat.lng': (['=', '<', '<=', '>', '>='], float),
+        'sat.off_nadir': (['=', '<', '<=', '>', '>='], float),
+        'sun.altitude': (['=', '<', '<=', '>', '>='], float),
+        'sun.azimuth': (['=', '<', '<=', '>', '>='], float),
+        'sun.local_time_of_day': (['=', '<', '<=', '>', '>='], float)
+    }
+
+
     def execute(self, quals, columns):
       """
       Execute the query on the Planet API.
 
       :param list quals: List of predicates from the WHERE clause of the SQL
       statement. If a geometric predicate is used to filter scenes, the API
-      will be used to evaluate the && operator. Other predicates may be added,
-      but they will be evaluated in PostgreSQL and not on the remote server.
+      will be used to evaluate the && operator. Certain PostGIS functions,
+      notably ST_Intersects, will generate a predicate with the && operator,
+      and therefore use of these functions will filter geometries on the remote
+      server rather than in Postgres, which is the desired bahaviour. Other
+      operators may also be used, but they will not be evaluated on the remote
+      server.
 
       :param list columns: List of columns requested in the SELECT statement.
       """
@@ -44,40 +70,46 @@ class PlanetScenes(GeoFDW):
           for feature in scenes['features']:
               geom = feature['geometry']
               row = {}
-              for k, v in feature['properties'].iteritems():
-                  row[k] = json.dumps(v)
+              properties = feature['properties']
+              for k,v in properties.iteritems():
+                  if k in ['camera', 'cloud_cover', 'image_statistics', 'sat', 'sun']:
+                      for subk in v.keys():
+                          row['%s.%s' % (k, subk)] = v[subk]
+                  elif k in ['acquired', 'published']:
+                      row[k] = v
               row['geom'] = pypg.geometry.shape.to_postgis(geom, self.srid)
               yield row
+
+    def _get_filter(self, qual):
+        if qual.field_name in ['acquired', 'published']:
+            if qual.operator in ['=', '<', '<=', '>', '>=']:
+                return '%s.%s' % (qual.field_name, self.OPERATORS[qual.operator]), qual.value
+
+        if qual.field_name in self.PROPERTIES:
+            attribs = self.PROPERTIES[qual.field_name]
+            if qual.operator in attribs[0]:
+                if attribs[1] == list:
+                    if qual.value in attribs[2]:
+                        return '%s.%s' % (qual.field_name, self.OPERATORS[qual.operator]), qual.value
+                else:
+                        return '%s.%s' % (qual.field_name, self.OPERATORS[qual.operator]), attribs[1](qual.value)
+        return None
 
     def _get_predicates(self, quals):
         shape = None
         filters = {}
+        print quals
         for qual in quals:
             if qual.field_name == 'geom':
                 if qual.operator in ['&&']:
                     shape, srid = pypg.geometry.postgis.to_shape(qual.value)
-            elif qual.value == 'geom':
-                if qual.operator in ['&&']:
-                    shape, srid = pypg.geometry.postgis.to_shape(qual.field_name)
-            elif qual.field_name == 'acquired':
-                if qual.operator == '<':
-                    filters['acquired.lt'] = qual.value
-                elif qual.operator == '<=':
-                    filters['acquired.lte'] = qual.value
-                elif qual.operator == '>':
-                    filters['acquired.gt'] = qual.value
-                elif qual.operator == '>=':
-                    filters['acquired.gte'] = qual.value
-            elif qual.value == 'acquired':
-                if qual.operator == '<':
-                    filters['acquired.gt'] = qual.field_name
-                elif qual.operator == '<=':
-                    filters['acquired.gte'] = qual.field_name
-                elif qual.operator == '>':
-                    filters['acquired.lt'] = qual.field_name
-                elif qual.operator == '>=':
-                    filters['acquired.lte'] = qual.field_name
-
+            else:
+                f = self._get_filter(qual)
+                if f:
+                    key = f[0]
+                    value = f[1]
+                    filters[key] = value
+        print filters
         if shape:
             if srid != 4326:
                  raise InvalidGeometryError('Planet API only accepts geometries using an SRID of 4326.')
