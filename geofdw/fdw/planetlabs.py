@@ -71,11 +71,11 @@ class PlanetScenes(GeoFDW):
         scenes = self.client.get_scenes_list(intersects=aoi, **filters).get()
         if scenes['count'] > 0:
             for feature in scenes['features']:
-                geom = feature['geometry']
                 row = {}
                 if 'id' in columns:
                     row['id'] = feature['id']
                 if 'geom' in columns:
+                    geom = feature['geometry']
                     row['geom'] = pypg.geometry.shape.to_postgis(geom, self.srid)
                 properties = feature['properties']
                 for k, v in properties.iteritems():
@@ -85,7 +85,10 @@ class PlanetScenes(GeoFDW):
                             if key in columns and key in self.FILTERS.keys():
                                 attribs = self.FILTERS[key]
                                 if attribs[1] == list:
-                                    value = v[subkey]
+                                    if v[subkey] in attribs[2]:
+                                        value = v[subkey]
+                                    else:
+                                        value = None
                                 else:
                                     value = attribs[1](v[subkey])
                                 row[key] = value
