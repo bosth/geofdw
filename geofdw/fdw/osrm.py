@@ -2,9 +2,8 @@
 :class:`OSRM` is an Open Source Routing Machine foreign data wrapper.
 """
 
-import pypg
+from plpygis import Geometry, Point, LineString
 from geofdw.base import GeoFDW
-from shapely.geometry import Point, LineString
 from polyline.codec import PolylineCodec
 
 import requests
@@ -38,9 +37,8 @@ class OSRM(GeoFDW):
       target GEOMETRY(POINT, 4326): target point of route
     """
     super(OSRM, self).__init__(options, columns, srid=4326)
-    zoom = int(options.get('zoom', 14))
-    url = options.get('url', 'http://router.project-osrm.org/viaroute')
-    self.url_base = '%s?z=%d&output=json&alt=false&instructions=true&' % (url, zoom)
+    zoom = int(options.get("zoom", 14))
+    self.url = options.get("url", "http://router.project-osrm.org/route/v1/driving/")
 
   def execute(self, quals, columns):
     """
@@ -64,20 +62,22 @@ class OSRM(GeoFDW):
     when querying the OSRM FDW.
     """
     source, target = self._get_predicates(quals)
-    self.source = source[0]
-    self.target = target[0]
-    if not self.source or not self.target:
+    if not source or not target:
       return []
-    if source[1] != 4326:
-      raise Exception('Incorrect SRID:' % source.srid) # TODO
-    if target[1] != 4326:
-      raise Exception('Incorrect SRID:' % target.srid) # TODO
+    if source.srid != 4326:
+      raise Exception("Incorrect SRID:" % source.srid) # TODO
+    if target.srid != 4326:
+      raise Exception("Incorrect SRID:" % target.srid) # TODO
+    self.source = source
+    self.target = target
 
     url = self._get_url()
+    self.log(url)
     response = requests.get(url).json()
 
-    points = PolylineCodec().decode(response['route_geometry'])
-    instructions = response['route_instructions']
+    for segment in response["waypoints"]:
+
+    instructions = response["route_instructions"]
     return self._execute(columns, points, instructions)
 
   def _execute(self, columns, points, instructions):
@@ -86,43 +86,41 @@ class OSRM(GeoFDW):
       start = instructions[i][3]
       end = instructions[i+1][3]
 
-      if 'geom' in columns:
+      if "geom" in columns:
         if end - start < 2:
-          point = Point(points[start])
-          geom = pypg.geometry.shape.to_postgis(point, self.srid)
+          geom = Point(points[start], srid=srid).wkb
+          print geom
         else:
-          line = LineString(points[start:end])
-          geom = pypg.geometry.shape.to_postgis(line, self.srid)
-      row['geom'] = geom
-      if 'turn' in columns:
-        row['turn'] = instructions[i][0]
-      if 'name' in columns:
-        row['name'] = instructions[i][1]
-      if 'length' in columns:
-        row['length'] = instructions[i][2]
-      if 'time' in columns:
-        row['time'] = instructions[i][4]
-      if 'azimuth' in columns:
-        row['azimuth'] = instructions[i][7]
-      if 'source' in columns:
-        wkb = pypg.geometry.shape.to_postgis(self.source)
-        row['source'] = wkb
-      if 'target' in columns:
-        wkb = pypg.geometry.shape.to_postgis(self.target)
-        row['target'] = wkb
+          geom = LineString(points[start:end], srid=srid).wkb
+          print geom
+      row["geom"] = geom
+      if "turn" in columns:
+        row["turn"] = instructions[i][0]
+      if "name" in columns:
+        row["name"] = instructions[i][1]
+      if "length" in columns:
+        row["length"] = instructions[i][2]
+      if "time" in columns:
+        row["time"] = instructions[i][4]
+      if "azimuth" in columns:
+        row["azimuth"] = instructions[i][7]
+      if "source" in columns:
+        row["source"] = self.source.wkb
+      if "target" in columns:
+        row["target"] = self.target.wkb
       yield row
 
   def _get_predicates(self, quals):
     source = None
     target = None
     for qual in quals:
-      if qual.field_name == 'source' and qual.operator == '=':
-        source = pypg.geometry.postgis.to_shape(qual.value)
-      elif qual.field_name == 'target' and qual.operator == '=':
-        target = pypg.geometry.postgis.to_shape(qual.value)
+      if qual.field_name == "source" and qual.operator == "=":
+        source = Geometry(qual.value)
+      elif qual.field_name == "target" and qual.operator == "=":
+        target = Geometry(qual.value)
     return source, target
 
   def _get_url(self):
     source = self.source
     target = self.target
-    return self.url_base + 'loc=%f,%f&loc=%f,%f' % (source.x, source.y, target.x, target.y)
+    return self.url + "%f,%f;%f,%f" % (source.y, source.x, target.y, target.x) + "?overview=false&geometries=geojson&steps=true"

@@ -19,16 +19,24 @@ class PlanetScenes(GeoFDW):
         "cloud_cover.estimated" NUMERIC,
         "image_statistics.gsd" NUMERIC, "image_statistics.image_quality" image_quality, "image_statistics.snr" NUMERIC,
         "sat.alt" NUMERIC, "sat.id" TEXT, "sat.lat" NUMERIC, "sat.lng" NUMERIC, "sat.off_nadir" NUMERIC,
-        "sun.altitude" NUMERIC, "sun.azimuth" NUMERIC, "sun.local_time_of_day" NUMERIC
+        "sun.altitude" NUMERIC, "sun.azimuth" NUMERIC, "sun.local_time_of_day" NUMERIC,
+        aoi GEOMETRY(GEOMETRY, 4326)
     """
     def __init__(self, options, columns):
         super(PlanetScenes, self).__init__(options, columns, srid=4326)
         api_key = self.get_option('api_key', required=True)
+        self.limit = self.get_option('limit', default=None, option_type=int)
         self.client = api.Client(api_key=api_key)
 
     @property
     def rowid_column(self):
         return 'id'
+
+    def get_path_keys(self):
+        return [(('id',), 1), (('strip_id',), 20), (('aoi',), 1000)]
+
+    def get_rel_size(self, quals, columns):
+        return (1000000, 10000)
 
     OPERATORS = {'=':'eq', '<':'lt', '<=':'lte', '>':'gt', '>=':'gte'}
     FILTERS = {
@@ -68,15 +76,30 @@ class PlanetScenes(GeoFDW):
         :param list columns: List of columns requested in the SELECT statement.
         """
         aoi, filters = self._get_predicates(quals)
-        scenes = self.client.get_scenes_list(intersects=aoi, **filters).get()
-        if scenes['count'] > 0:
-            for feature in scenes['features']:
+
+        if aoi:
+            shape, srid = pypg.geometry.postgis.to_shape(aoi)
+            if srid != 4326:
+                raise InvalidGeometryError('Planet API only accepts geometries using an SRID of 4326.')
+            if shape.type == 'Point':
+                shape = pypg.geometry.shape.to_wkt(shape)
+            else:
+                shape = pypg.geometry.shape.to_wkt(box(*shape.bounds))
+        else:
+            shape = None
+
+        scenes = self.client.get_scenes_list(intersects=shape, **filters)
+        if scenes.size > 0:
+            for feature in scenes.items_iter(self.limit):
                 row = {}
                 if 'id' in columns:
                     row['id'] = feature['id']
                 if 'geom' in columns:
                     geom = feature['geometry']
                     row['geom'] = pypg.geometry.shape.to_postgis(geom, self.srid)
+                if 'aoi' in columns:
+                    row['aoi'] = aoi
+
                 properties = feature['properties']
                 for k, v in properties.iteritems():
                     if k in ['camera', 'cloud_cover', 'image_statistics', 'sat', 'sun']:
@@ -112,23 +135,17 @@ class PlanetScenes(GeoFDW):
         return None
 
     def _get_predicates(self, quals):
-        shape = None
+        aoi = None
         filters = {}
         for qual in quals:
-            if qual.field_name == 'geom':
+            if qual.field_name == 'aoi':
                 if qual.operator in ['&&']:
-                    shape, srid = pypg.geometry.postgis.to_shape(qual.value)
+                    aoi = qual.value
             else:
                 f = self._get_filter(qual)
                 if f:
                     key = f[0]
                     value = f[1]
                     filters[key] = value
-        if shape:
-            if srid != 4326:
-                 raise InvalidGeometryError('Planet API only accepts geometries using an SRID of 4326.')
-            aoi = pypg.geometry.shape.to_wkt(box(*shape.bounds))
-        else:
-            aoi = None
 
         return aoi, filters
