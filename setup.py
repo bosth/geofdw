@@ -59,7 +59,7 @@ setup(
       'Shapely>=1.5.0'
       'geopy>=1.9.1',
       'requests>=2.4.0',
-      'plpygis>=0.2'
+      'plpygis>=0.0.2'
     ],
     extras_require = {
       'testing': ['pytest']
