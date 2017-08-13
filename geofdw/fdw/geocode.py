@@ -4,9 +4,8 @@ geocoding module.
 """
 
 from geofdw.base import *
-from shapely.geometry import Point
 import geopy
-import pypg
+from plpygis import Geometry, Point
 
 class _Geocode(GeoFDW):
   def __init__(self, options, columns):
@@ -94,7 +93,7 @@ class FGeocode(_Geocode):
         rank = rank + 1
         row = { 'rank' : rank }
         if col_geom:
-          geom = pypg.geometry.shape.to_postgis(Point(location.latitude, location.longitude, location.altitude), self.srid)
+          geom = Point((location.latitude, location.longitude, location.altitude), srid=self.srid)
           row['geom'] = geom
         if col_addr:
           row['address'] = location.address
@@ -110,10 +109,10 @@ class FGeocode(_Geocode):
         query = qual.value
 
       if qual.field_name == 'geom' and qual.operator in ['&&', '@']: # note A ~ B is transformed into B @ A
-        shape, srid = pypg.geometry.postgis.to_shape(qual.value)
+        shape = Geometry(qual.value).shapely
         bounds = shape.bounds
       elif qual.value == 'geom' and qual.operator == '&&':
-        shape, srid = pypg.geometry.postgis.to_shape(qual.field_name)
+        shape = Geometry(qual.field_name).shapely
         bounds = shape.bounds
 
     return query, bounds
@@ -183,22 +182,20 @@ class RGeocode(_Geocode):
       rank = rank + 1
       row = { 'rank' : rank }
       if col_geom:
-        geom = pypg.geometry.shape.to_postgis(Point(location.latitude, location.longitude, location.altitude), self.srid)
+        geom = Point((location.latitude, location.longitude, location.altitude), srid=self.srid)
         row['geom'] = geom
       if col_addr:
         row['address'] = location.address
       if col_query:
-        row['query'] = pypg.geometry.shape.to_postgis(query, self.srid)
+        row['query'] = query.wkb
       yield row
 
   def _get_predicates(self, quals):
     for qual in quals:
       if qual.field_name == 'query' and qual.operator == '=':
-        shape, srid = pypg.geometry.postgis.to_shape(qual.value)
-        return shape
-
+        return Geometry(qual.value)
     return None
 
   def _get_locations(self, query):
-    log_to_postgres('GeocodeR (%s): running query "%s"' % (self.service, query.wkt), DEBUG)
+    log_to_postgres('GeocodeR (%s): running query "%s"' % (self.service, query), DEBUG)
     return self.geocoder.reverse([query.x, query.y])

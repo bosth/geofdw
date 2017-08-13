@@ -4,7 +4,8 @@
 
 from geofdw.base import GeoFDW
 from geofdw.exception import MissingColumnError, MissingOptionError, OptionTypeError
-import pypg
+from plpygis import Geometry
+import json
 import requests
 
 class GeoJSON(GeoFDW):
@@ -17,10 +18,10 @@ class GeoJSON(GeoFDW):
   attempt case-insensitive matching between the column names and the attribute
   names in the GeoJSON file.
 
-  Note that the geometry will use the SRID 4326 (WGS84) as specified by the
-  GeoJSON standard. If you think you know better the SRID can be overridden
-  with a table option (remember, you are *casting* the values to a new CRS, not
-  tranforming them). The GeoJSON foreign data wrapper will *not* attempt to
+  Note that the geometry will use the SRID 4326 as specified by the GeoJSON
+  standard. If you think you know better the SRID can be overridden with a
+  table option (remember, you are *casting* the values to a new CRS, not
+  transforming them). The GeoJSON foreign data wrapper will *not* attempt to
   parse any CRS defined in the GeoJSON file itself.
   """
   def __init__(self, options, columns):
@@ -38,9 +39,9 @@ class GeoJSON(GeoFDW):
       geom (required)
     """
     super(GeoJSON, self).__init__(options, columns)
-    self.check_columns(['geom'])
-    self.url = self.get_option('url')
-    self.srid = self.get_option('srid', required=False, default=4326, option_type=int)
+    self.check_columns(["geom"])
+    self.url = self.get_option("url")
+    self.srid = self.get_option("srid", required=False, default=4326, option_type=int)
     self.get_request_options()
 
   def execute(self, quals, columns):
@@ -57,37 +58,38 @@ class GeoJSON(GeoFDW):
     try:
       response = requests.get(self.url, auth=self.auth, verify=self.verify)
     except requests.exceptions.ConnectionError as e:
-      self.log('GeoJSON FDW: unable to connect to %s' % self.url)
+      self.log("GeoJSON FDW: unable to connect to %s" % self.url)
       return []
     except requests.exceptions.Timeout as e: #pragma: no cover
-      self.log('GeoJSON FDW: timeout connecting to %s' % self.url)
+      self.log("GeoJSON FDW: timeout connecting to %s" % self.url)
       return []
 
     try:
       data = response.json()
     except ValueError as e:
-      self.log('GeoJSON FDW: invalid JSON')
+      self.log("GeoJSON FDW: invalid JSON")
       return []
     try:
-      features = data['features']
+      features = data["features"]
     except KeyError as e:
-      self.log('GeoJSON FDW: invalid GeoJSON')
+      self.log("GeoJSON FDW: invalid GeoJSON")
       return []
     return self._execute(features, columns)
 
   def _execute(self, features, columns):
-    if 'geom' in columns:
-      columns.remove('geom')
+    if "geom" in columns:
+      columns.remove("geom")
       use_geom = True
     else:
       use_geom = False
     for feat in features:
       row = {}
       if use_geom:
-        geom = pypg.geometry.geojson.to_postgis(feat['geometry'], self.srid)
-        row['geom'] = geom
+        gj = feat["geometry"]
+        geom = Geometry.from_geojson(gj, srid=self.srid)
+        row["geom"] = geom.wkb
 
-      properties = feat['properties']
+      properties = feat["properties"]
       for p in properties.keys():
         for col in columns:
           if col == p or col == p.lower():

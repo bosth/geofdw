@@ -1,32 +1,32 @@
 DROP SERVER geojson CASCADE;
 DROP SERVER geocode CASCADE;
 DROP SERVER geocode_reverse CASCADE;
-DROP SERVER osrm CASCADE;
+DROP SERVER random_point CASCADE;
+
+------Random point
+CREATE SERVER random_point FOREIGN DATA WRAPPER multicorn OPTIONS (wrapper 'geofdw.RandomPoint');
+CREATE FOREIGN TABLE random_points(geom geometry(point)) SERVER random_point OPTIONS (min_x '-180', min_y '-90', max_x '180', max_y '90', num '10');
+SELECT ST_AsText(geom) FROM random_points;
 
 --GeoJSON
 CREATE SERVER geojson foreign data wrapper multicorn options ( wrapper 'geofdw.fdw.GeoJSON' );
-CREATE FOREIGN TABLE geojson_simple ( geom GEOMETRY, name TEXT, year TEXT ) SERVER geojson OPTIONS ( url 'https://raw.githubusercontent.com/MaptimeSEA/geojson/master/Dara.geojson', srid '900913' );
+CREATE FOREIGN TABLE geojson_simple    (geom geometry, name TEXT, year TEXT) SERVER geojson OPTIONS (url 'https://raw.githubusercontent.com/MaptimeSEA/geojson/master/Dara.geojson', srid '900913');
+CREATE FOREIGN TABLE geojson_countries (geom geometry, name TEXT, id TEXT)   SERVER geojson OPTIONS (url 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json');
 SELECT *, ST_AsText(geom) FROM geojson_simple;
-CREATE FOREIGN TABLE geojson_countries ( geom GEOMETRY, name TEXT, id TEXT ) SERVER geojson OPTIONS ( url 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json' );
-SELECT name, ST_NumGeometries(geom) AS polygons, ST_SRID(geom) AS srid FROM geojson_countries ORDER BY polygons DESC LIMIT 10;
+SELECT name, ST_NumGeometries(geom) AS polygons FROM geojson_countries ORDER BY polygons DESC LIMIT 10;
 
 --Forward Geocoding
 CREATE SERVER geocode FOREIGN DATA WRAPPER multicorn OPTIONS ( wrapper 'geofdw.FGeocode' );
-CREATE FOREIGN TABLE gc_google ( query TEXT, rank INTEGER, address TEXT, geom GEOMETRY ) SERVER geocode;
-SELECT query, rank, address, ST_AsText(geom), ST_SRID(geom) FROM gc_google WHERE query = 'canada house' AND geom && ST_GeomFromEWKT('SRID=4326;POLYGON((50 2, 55 2, 55 -2, 50 -2, 50 2))');
-SELECT query, rank, address, ST_AsText(geom), ST_SRID(geom) FROM gc_google WHERE query = 'canada house' AND ST_GeomFromEWKT('SRID=4326;POLYGON((50 2, 55 2, 55 -2, 50 -2, 50 2))') && geom;
-SELECT query, rank, address, ST_AsText(geom), ST_SRID(geom) FROM gc_google WHERE query = 'canada house' AND ST_GeomFromEWKT('SRID=4326;POLYGON((50 2, 55 2, 55 -2, 50 -2, 50 2))') ~ geom;
-CREATE FOREIGN TABLE gc_nominatim ( query TEXT, rank INTEGER, address TEXT, geom GEOMETRY ) SERVER geocode OPTIONS ( service 'nominatim');
-SELECT query, rank, address, ST_AsText(geom), ST_SRID(geom) FROM gc_nominatim WHERE query = 'canada house' AND geom && ST_GeomFromEWKT('SRID=4326;POLYGON((50 2, 55 2, 55 -2, 50 -2, 50 2))');
-CREATE FOREIGN TABLE gc_arcgis ( query TEXT, rank INTEGER, address TEXT, geom GEOMETRY ) SERVER geocode OPTIONS ( service 'arcgis');
-SELECT query, rank, address, ST_AsText(geom), ST_SRID(geom) FROM gc_arcgis WHERE query = 'canada house';
+CREATE FOREIGN TABLE gc_google    (query TEXT, rank INTEGER, address TEXT, geom geometry) SERVER geocode;
+CREATE FOREIGN TABLE gc_arcgis    (query TEXT, rank INTEGER, address TEXT, geom geometry) SERVER geocode OPTIONS ( service 'arcgis');
+CREATE FOREIGN TABLE gc_nominatim (query TEXT, rank INTEGER, address TEXT, geom geometry) SERVER geocode OPTIONS ( service 'nominatim');
+SELECT rank, address, ST_AsText(geom) FROM gc_google WHERE query = 'canada house' AND geom && ST_GeomFromEWKT('SRID=4326;POLYGON((50 2, 55 2, 55 -2, 50 -2, 50 2))');
+SELECT rank, address, ST_AsText(geom) FROM gc_google WHERE query = 'canada house' AND ST_GeomFromEWKT('SRID=4326;POLYGON((50 2, 55 2, 55 -2, 50 -2, 50 2))') && geom;
+SELECT rank, address, ST_AsText(geom) FROM gc_google WHERE query = 'canada house' AND ST_GeomFromEWKT('SRID=4326;POLYGON((50 2, 55 2, 55 -2, 50 -2, 50 2))') ~ geom;
+SELECT rank, address, ST_AsText(geom) FROM gc_nominatim WHERE query = 'canada house' AND geom && ST_GeomFromEWKT('SRID=4326;POLYGON((50 2, 55 2, 55 -2, 50 -2, 50 2))');
+SELECT rank, address, ST_AsText(geom) FROM gc_arcgis WHERE query = 'canada house';
 
 --Reverse geocoding
-CREATE SERVER geocode_reverse FOREIGN DATA WRAPPER multicorn OPTIONS ( wrapper 'geofdw.RGeocode' );
-CREATE FOREIGN TABLE gc_google_reverse ( query GEOMETRY, rank INTEGER, address TEXT, geom GEOMETRY ) SERVER geocode_reverse;
-SELECT ST_AsText(query), rank, address, ST_AsText(geom), ST_SRID(geom) FROM gc_google_reverse WHERE query = ST_SetSRID(ST_MakePoint(52, -110), 4326);
-
---OSRM
-CREATE SERVER osrm FOREIGN DATA WRAPPER multicorn OPTIONS ( wrapper 'geofdw.OSRM' );
-CREATE FOREIGN TABLE osrm ( name TEXT, length INTEGER, time INTEGER, azimuth FLOAT, turn INTEGER, geom GEOMETRY, source GEOMETRY, target GEOMETRY ) SERVER osrm;
-SELECT name, length, time, turn, azimuth,  ST_Length(geom), ST_SRID(geom) FROM osrm WHERE source = ST_SetSRID(ST_MakePoint(51.6407057,-121.2970343), 4326) AND target = ST_SetSRID(ST_MakePoint(49.2892415,-123.017522), 4326);
+CREATE SERVER geocode_reverse FOREIGN DATA WRAPPER multicorn OPTIONS (wrapper 'geofdw.RGeocode');
+CREATE FOREIGN TABLE gc_google_reverse (query geometry, rank INTEGER, address TEXT, geom geometry) SERVER geocode_reverse;
+SELECT rank, address, ST_AsText(geom) FROM gc_google_reverse WHERE query = ST_SetSRID(ST_MakePoint(52, -110), 4326);

@@ -60,7 +60,7 @@ setup(
       'polyline>=1.1',
       'geopy>=1.9.1',
       'requests>=2.4.0',
-      'pypg>=0.1'
+      'plpygis>=0.2'
     ],
     extras_require = {
       'testing': ['pytest']

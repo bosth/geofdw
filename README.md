@@ -6,8 +6,7 @@ Currently implemented forward data wrappers are:
 * FGeocode: forward geocoding
 * RGeocode: reverse geocoding
 * GeoJSON: online GeoJSON
-* OSRM: OpenSource Routing Machine
-* WCS: pull raster data from a Web Processing Service
+* RandomPoint: random point in a bounding box
 
 ## Examples
 
