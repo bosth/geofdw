@@ -1,9 +1,11 @@
 from multicorn.utils import log_to_postgres
 from logging import ERROR
 
+
 class GeoFDWError(Exception):
     def __init__(self, message):
         log_to_postgres(message, ERROR)
+
 
 class MissingColumnError(GeoFDWError):
     """
@@ -11,8 +13,9 @@ class MissingColumnError(GeoFDWError):
     requires a geom column).
     """
     def __init__(self, column):
-        message = 'Missing column "%s"' % column
+        message = "Missing column '%s'" % column
         super(MissingColumnError, self).__init__(message)
+
 
 class MissingOptionError(GeoFDWError):
     """
@@ -20,16 +23,18 @@ class MissingOptionError(GeoFDWError):
     option).
     """
     def __init__(self, option):
-        message = 'Missing option "%s"' % option
+        message = "Missing option '%s'" % option
         super(MissingOptionError, self).__init__(message)
+
 
 class OptionTypeError(GeoFDWError):
     """
     Option has wrong type (e.g. SRID must be an integer).
     """
     def __init__(self, option, option_type):
-        message = 'Option %s is not of type %s' % (option, option_type)
+        message = "Option %s is not of type %s" % (option, option_type)
         super(OptionTypeError, self).__init__(message)
+
 
 class OptionValueError(GeoFDWError):
     """
@@ -38,22 +43,27 @@ class OptionValueError(GeoFDWError):
     def __init__(self, message):
         super(OptionValueError, self).__init__(message)
 
+
 class CRSError(GeoFDWError):
     """
     Invalid CRS.
     """
     def __init__(self, crs):
-        message = 'Bad CRS value of %s' % crs
+        message = "Bad CRS value of %s" % crs
         super(CRSError, self).__init__(message)
+
 
 class InvalidGeometryError(GeoFDWError):
     pass
 
+
 class ValueBoundsError(GeoFDWError):
     pass
 
+
 class QueryPredicateError(GeoFDWError):
     pass
+
 
 class MissingQueryPredicateError(GeoFDWError):
     """

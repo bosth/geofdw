@@ -8,6 +8,8 @@ Currently implemented forward data wrappers are:
 * GeoJSON: online GeoJSON
 * RandomPoint: random point in a bounding box
 
+`geofdw` uses [plpygis](https://github.com/bosth/plpygis) to manipulate PostGIS geometries.
+
 ## Examples
 
 ### FGeocode
