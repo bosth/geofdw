@@ -10,7 +10,7 @@ from setuptools.command.test import test as TestCommand
 from geofdw._version import __version__
 
 def readme():
-    with open("README.md") as f:
+    with open("README.rst") as f:
         return f.read()
 
 class PyTest(TestCommand):
