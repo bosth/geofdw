@@ -20,10 +20,11 @@ CREATE SERVER geocode FOREIGN DATA WRAPPER multicorn OPTIONS ( wrapper 'geofdw.F
 CREATE FOREIGN TABLE gc_google    (query TEXT, rank INTEGER, address TEXT, geom geometry) SERVER geocode;
 CREATE FOREIGN TABLE gc_arcgis    (query TEXT, rank INTEGER, address TEXT, geom geometry) SERVER geocode OPTIONS ( service 'arcgis');
 CREATE FOREIGN TABLE gc_nominatim (query TEXT, rank INTEGER, address TEXT, geom geometry) SERVER geocode OPTIONS ( service 'nominatim');
-SELECT rank, address, ST_AsText(geom) FROM gc_google WHERE query = 'canada house' AND geom && ST_GeomFromEWKT('SRID=4326;POLYGON((50 2, 55 2, 55 -2, 50 -2, 50 2))');
-SELECT rank, address, ST_AsText(geom) FROM gc_google WHERE query = 'canada house' AND ST_GeomFromEWKT('SRID=4326;POLYGON((50 2, 55 2, 55 -2, 50 -2, 50 2))') && geom;
-SELECT rank, address, ST_AsText(geom) FROM gc_google WHERE query = 'canada house' AND ST_GeomFromEWKT('SRID=4326;POLYGON((50 2, 55 2, 55 -2, 50 -2, 50 2))') ~ geom;
-SELECT rank, address, ST_AsText(geom) FROM gc_nominatim WHERE query = 'canada house' AND geom && ST_GeomFromEWKT('SRID=4326;POLYGON((50 2, 55 2, 55 -2, 50 -2, 50 2))');
+SELECT rank, address, ST_AsText(geom) FROM gc_nominatim WHERE query = 'canada house' AND geom && ST_GeomFromEWKT('SRID=4326;POLYGON((2 50, 2 55, -2 55, -2 50, 2 50))');
+SELECT rank, address, ST_AsText(geom) FROM gc_nominatim WHERE query = 'canada house' AND ST_GeomFromEWKT('SRID=4326;POLYGON((2 50, 2 55, -2 55, -2 50, 2 50))') && geom;
+SELECT rank, address, ST_AsText(geom) FROM gc_nominatim WHERE query = 'canada house' AND ST_GeomFromEWKT('SRID=4326;POLYGON((2 50, 2 55, -2 55, -2 50, 2 50))') ~ geom;
+SELECT rank, address, ST_AsText(geom) FROM gc_nominatim WHERE query = 'canada house';
+SELECT rank, address, ST_AsText(geom) FROM gc_google WHERE query = 'canada house';
 SELECT rank, address, ST_AsText(geom) FROM gc_arcgis WHERE query = 'canada house';
 
 --Reverse geocoding

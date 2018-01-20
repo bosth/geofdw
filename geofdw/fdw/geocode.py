@@ -93,7 +93,7 @@ class FGeocode(_Geocode):
         rank = rank + 1
         row = { 'rank' : rank }
         if col_geom:
-          geom = Point((location.latitude, location.longitude, location.altitude), srid=self.srid)
+          geom = Point((location.longitude, location.latitude, location.altitude), srid=self.srid)
           row['geom'] = geom
         if col_addr:
           row['address'] = location.address
@@ -157,7 +157,7 @@ class RGeocode(_Geocode):
 
     :param list quals: List of predicates from the WHERE clause of the SQL
     statement. The geocoder expects that one of these predicates will be of the
-    form "query = ST_MakePoint(52, 0)"
+    form "query = ST_MakePoint(0, 52)"
 
       Other predicates may be added, but they will be evaluated in PostgreSQL
       and not here.
@@ -182,7 +182,7 @@ class RGeocode(_Geocode):
       rank = rank + 1
       row = { 'rank' : rank }
       if col_geom:
-        geom = Point((location.latitude, location.longitude, location.altitude), srid=self.srid)
+        geom = Point((location.longitude, location.latitude, location.altitude), srid=self.srid)
         row['geom'] = geom
       if col_addr:
         row['address'] = location.address
