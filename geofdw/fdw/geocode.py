@@ -113,11 +113,9 @@ class FGeocode(_Geocode):
 
             # note A ~ B is transformed into B @ A
             if qual.field_name == "geom" and qual.operator in ["&&", "@"]:
-                shape = Geometry(qual.value).shapely
-                bounds = shape.bounds
+                bounds = Geometry(qual.value).bounds
             elif qual.value == "geom" and qual.operator == "&&":
-                shape = Geometry(qual.field_name).shapely
-                bounds = shape.bounds
+                bounds = Geometry(qual.field_name).bounds
 
         return query, bounds
 
@@ -125,7 +123,7 @@ class FGeocode(_Geocode):
         log_to_postgres("Geocode (%s): running query '%s' with bounds = %s" %
                         (self.service, query, str(bounds)), DEBUG)
         if bounds and self.service == "googlev3":
-            return self.geocoder.geocode(query, False, bounds=bounds)
+            return self.geocoder.geocode(query, False, bounds=(bounds[1], bounds[0], bounds[3], bounds[2]))
         else:
             return self.geocoder.geocode(query, False)
 

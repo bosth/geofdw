@@ -43,10 +43,9 @@ setup(
     ],
     install_requires = [
       "multicorn>=1.1.0",
-      "Shapely>=1.5.0",
       "geopy>=1.9.1",
       "requests>=2.4.0",
-      "plpygis>=0.0.2"
+      "plpygis>=0.0.3"
     ],
     extras_require = {
       'testing': ['pytest']
