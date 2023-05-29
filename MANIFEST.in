@@ -1,1 +1,3 @@
 recursive-include geofdw *.py
+
+global-exclude *.py[cod]

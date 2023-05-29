@@ -42,7 +42,7 @@ setup(
     classifiers = [
     ],
     install_requires = [
-      "multicorn>=1.1.0",
+      "multicorn>=2.4",
       "geopy>=1.9.1",
       "requests>=2.4.0",
       "plpygis>=0.0.3"
