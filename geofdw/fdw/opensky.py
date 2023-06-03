@@ -106,6 +106,7 @@ class StateVector(_OpenSky):
         epoch = None
         icao24 = None
         bounds = None
+        log_to_postgres("QUAL {}".format(quals), INFO)
         for qual in quals:
             if qual.field_name == "time" and qual.operator == "=":
                 time = qual.value.replace(tzinfo=timezone.utc)
@@ -181,3 +182,9 @@ class StateVector(_OpenSky):
             log_to_postgres("OPENSKY {}".format(response.text), ERROR)
             raise e
         return json.get("states")
+
+    def get_path_keys(self):
+        """
+        Query planner helper.
+        """
+        return [("geom", 100), ("time", 10), ("icao24", 1)]
